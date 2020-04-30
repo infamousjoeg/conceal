@@ -8,15 +8,20 @@ import (
 
 	"github.com/keybase/go-keychain"
 	"golang.org/x/crypto/ssh/terminal"
-
-	"github.com/infamousjoeg/go-conceal/pkg/conceal/util"
 )
 
 // CheckSecret is a boolean function to verify a secret is present in keychain
 func CheckSecret(account string) {
 	accounts := ListSecrets()
 
-	found := util.Contains(account, accounts)
+	// Search all the available accounts for this one
+	found := false
+	for _, acc := range accounts {
+		if acc == account {
+			found = true
+		}
+	}
+
 	if found == false {
 		fmt.Printf("Account %s was not found in keychain. Exiting...\n", account)
 		os.Exit(1)
