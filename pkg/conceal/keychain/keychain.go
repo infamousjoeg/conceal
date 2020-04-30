@@ -6,9 +6,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/infamousjoeg/go-conceal/pkg/conceal/util"
 	"github.com/keybase/go-keychain"
 	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/infamousjoeg/go-conceal/pkg/conceal/util"
 )
 
 // CheckSecret is a boolean function to verify a secret is present in keychain
