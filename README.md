@@ -70,6 +70,10 @@ To display the current version, call `conceal` with the `-v` argument.
 [buymeacoffee]: https://www.buymeacoffee.com/infamousjoeg
 [buymeacoffee-shield]: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
 
+## Contributions
+
+Pull Requests are currently being accepted.  Please read and follow the guidelines laid out in ()[CONTRIBUTING.md].
+
 ## License
 
 [Apache 2.0](LICENSE)
