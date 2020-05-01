@@ -5,6 +5,8 @@ Conceal is a command-line utility that eases the interaction between developer a
 ## Table of Contents <!-- omit in toc -->
 - [Requirements](#requirements)
 - [Installation](#installation)
+  - [Homebrew (MacOS)](#homebrew-macos)
+  - [Manual](#manual)
 - [Usage](#usage)
   - [Add a secret](#add-a-secret)
   - [List Summon secrets](#list-summon-secrets)
@@ -22,6 +24,15 @@ Conceal is a command-line utility that eases the interaction between developer a
 _Windows Credential Manager support coming soon._
 
 ## Installation
+
+### Homebrew (MacOS)
+
+```shell
+brew tap infamousjoeg/tap
+brew install conceal
+```
+
+### Manual
 
 1. Download the latest release available at [GitHub Releases](https://github.com/infamousjoeg/go-conceal/releases).
 2. Move the `conceal` executable file to a directory in your `PATH`. (I use `~/bin`.)
