@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/infamousjoeg/go-conceal/pkg/conceal"
-	"github.com/infamousjoeg/go-conceal/pkg/conceal/keychain"
+	"github.com/infamousjoeg/conceal/pkg/conceal"
+	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 )
 
 func main() {
