@@ -12,6 +12,7 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Display Help](#display-help)
   - [Display Version](#display-version)
 - [Maintainer](#maintainer)
+- [Contributions](#contributions)
 - [License](#license)
 
 ## Requirements
