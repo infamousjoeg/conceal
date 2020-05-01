@@ -1,6 +1,6 @@
 # Conceal <!-- omit in toc -->
 
-Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access and Linux Keyring. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain/Keyring is added using Summon-compliant formatting.
+Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain is added using Summon-compliant formatting.
 
 [![](https://github.com/infamousjoeg/conceal/workflows/Go/badge.svg?branch=master)](https://github.com/infamousjoeg/conceal/actions?query=workflow%3AGo)
 
@@ -45,13 +45,13 @@ brew install conceal
 
 `$ conceal -a dockerhub/token`
 
-To add a secret to Keychain/Keyring, call `conceal` and use the `-a` argument to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner.
+To add a secret to Keychain, call `conceal` and use the `-a` argument to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner.
 
 ### List Summon secrets
 
 `$ conceal -l`
 
-To list all secrets associated with Summon in Keychain/Keyring, call `conceal` and use the `-l` argument to list all accounts present.
+To list all secrets associated with Summon in Keychain, call `conceal` and use the `-l` argument to list all accounts present.
 
 To filter the list further, pipe to `grep` like this `$ conceal -l | grep dockerhub/`.
 
