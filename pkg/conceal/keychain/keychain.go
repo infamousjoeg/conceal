@@ -37,51 +37,68 @@ func GetSecret() string {
 }
 
 // ListSecrets is a string array function that returns all secrets in keychain
-// with the label `summon`
+// with the label `summon`.
 func ListSecrets() []string {
-	accounts, err := keychain.GetGenericPasswordAccounts("summon")
+	// Note: OSX use the term "account" to refer to the secret id.
+	secretIds, err := keychain.GetGenericPasswordAccounts("summon")
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	return accounts
+	return secretIds
 }
 
 // AddSecret is a non-return function that adds the secret and secret value to
-// keychain
-func AddSecret(account string) {
+// keychain.
+func AddSecret(secretId string) {
 	// Add new generic password item to keychain
-	item := keychain.NewGenericPassword("summon", account, "summon", []byte(GetSecret()), "")
+	secret := []byte(GetSecret())
+	item := keychain.NewGenericPassword(
+		"summon", secretId, "summon", secret, "",
+	)
 	item.SetSynchronizable(keychain.SynchronizableNo)
 	item.SetAccessible(keychain.AccessibleAfterFirstUnlock)
+
 	err := keychain.AddItem(item)
+
+	// Duplicate item error
 	if err == keychain.ErrorDuplicateItem {
 		log.Fatalf(
-			"An error occurred trying to add secret to keychain.\n"+
-				"Account %s was already found. Cannot add duplicate secret. "+
-				"Exiting...\n",
-			account,
+			"An error occurred trying to add a secret to keychain.\n"+
+				"Secret '%s' already exists. Exiting...\n",
+			secretId,
+		)
+	}
+
+	// Unexpected error
+	if err != nil {
+		log.Fatalf(
+			"An unexpected error occurred trying to add a secret to "+
+				"the keychain:\n%s\nExiting...",
+			err,
 		)
 	}
 
 	// Verify the secret was set in keychain successfully
-	CheckSecret(account)
+	if !SecretExists(secretId) {
+		log.Fatalf("Secret %s not found in keychain. Exiting...\n", secret)
+	}
 
-	fmt.Printf("Added %s successfully to keychain.\n", account)
+	fmt.Printf("Added %s successfully to keychain.\n", secretId)
 	return
 }
 
 // DeleteSecret is a non-return function that removes the secret from keychain
-func DeleteSecret(account string) {
-	err := keychain.DeleteGenericPasswordItem("summon", account)
+func DeleteSecret(secretId string) {
+	err := keychain.DeleteGenericPasswordItem("summon", secretId)
 	if err != nil {
 		log.Fatalf(
 			"An error occurred trying to remove secret from "+
-				"keychain.\n  Account %s not found in keychain. Exiting...\n",
-			account,
+				"keychain.\n  Secret '%s' not found in keychain. Exiting...\n",
+			secretId,
 		)
 	}
 
-	fmt.Printf("Removed %s successfully from keychain.\n", account)
+	fmt.Printf("Removed %s successfully from keychain.\n", secretId)
 	return
 }
