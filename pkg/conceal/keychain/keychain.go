@@ -2,7 +2,7 @@ package keychain
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"strings"
 	"syscall"
 
@@ -23,11 +23,8 @@ func CheckSecret(account string) {
 	}
 
 	if found == false {
-		fmt.Printf("Account %s was not found in keychain. Exiting...\n", account)
-		os.Exit(1)
+		log.Fatalf("Account %s not found in keychain. Exiting...\n", account)
 	}
-
-	return
 }
 
 // GetSecret is a string function that securely gets the secret value from user
@@ -35,43 +32,40 @@ func GetSecret() string {
 	fmt.Println("Please enter the secret value: ")
 	byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		fmt.Println("An error occurred trying to read password from Stdin. Exiting...")
-		os.Exit(1)
+		log.Fatalln("An error occurred trying to read password from " +
+			"Stdin. Exiting...")
 	}
 	secret := string(byteSecretVal)
 
 	return strings.TrimSpace(secret)
 }
 
-// ListSecrets is a string array function that returns all secrets in keychain with the label `Summon`
+// ListSecrets is a string array function that returns all secrets in keychain
+// with the label `summon`
 func ListSecrets() []string {
 	accounts, err := keychain.GetGenericPasswordAccounts("summon")
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 
 	return accounts
 }
 
-// AddSecret is a non-return function that adds the secret and secret value to keychain
+// AddSecret is a non-return function that adds the secret and secret value to
+// keychain
 func AddSecret(account string) {
-	// Get secret security from user via Stdin
-	// secret := GetSecret()
-	// if secret == "" {
-	// 	fmt.Println("An error occurred trying to add secret to keychain.")
-	// 	fmt.Println("The secret value entered was empty. A value is required. Try again...")
-	// }
-
 	// Add new generic password item to keychain
 	item := keychain.NewGenericPassword("summon", account, "summon", []byte(GetSecret()), "")
 	item.SetSynchronizable(keychain.SynchronizableNo)
 	item.SetAccessible(keychain.AccessibleAfterFirstUnlock)
 	err := keychain.AddItem(item)
 	if err == keychain.ErrorDuplicateItem {
-		fmt.Println("An error occurred trying to add secret to keychain.")
-		fmt.Printf("Account %s was already found. Cannot add duplicate secret. Exiting...\n", account)
-		os.Exit(1)
+		log.Fatalf(
+			"An error occurred trying to add secret to keychain.\n"+
+				"Account %s was already found. Cannot add duplicate secret. "+
+				"Exiting...\n",
+			account,
+		)
 	}
 
 	// Verify the secret was set in keychain successfully
@@ -85,9 +79,11 @@ func AddSecret(account string) {
 func DeleteSecret(account string) {
 	err := keychain.DeleteGenericPasswordItem("summon", account)
 	if err != nil {
-		fmt.Println("An error occurred trying to remove secret from keychain.")
-		fmt.Printf("Account %s could not be found in keychain. Exiting...\n", account)
-		os.Exit(1)
+		log.Fatalf(
+			"An error occurred trying to remove secret from "+
+				"keychain.\n  Account %s not found in keychain. Exiting...\n",
+			account,
+		)
 	}
 
 	fmt.Printf("Removed %s successfully from keychain.\n", account)
