@@ -72,7 +72,7 @@ To display the current version, call `conceal` with the `-v` argument.
 
 ## Contributions
 
-Pull Requests are currently being accepted.  Please read and follow the guidelines laid out in ()[CONTRIBUTING.md].
+Pull Requests are currently being accepted.  Please read and follow the guidelines laid out in [](CONTRIBUTING.md).
 
 ## License
 
