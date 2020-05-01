@@ -21,9 +21,7 @@ Conceal is a command-line utility that eases the interaction between developer a
 
 ## Requirements
 
-* MacOS or Linux
-
-_Windows Credential Manager support coming soon._
+* MacOS
 
 ## Installation
 
