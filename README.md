@@ -2,7 +2,7 @@
 
 Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access and Linux Keyring. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain/Keyring is added using Summon-compliant formatting.
 
-![Go](https://github.com/infamousjoeg/conceal/workflows/Go/badge.svg?branch=master)
+![[](https://github.com/infamousjoeg/conceal/workflows/Go/badge.svg?branch=master)](https://github.com/infamousjoeg/conceal/actions?query=workflow%3AGo)
 
 ## Table of Contents <!-- omit in toc -->
 - [Requirements](#requirements)
