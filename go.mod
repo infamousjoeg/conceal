@@ -1,6 +1,6 @@
-module github.com/infamousjoeg/go-conceal
+module github.com/infamousjoeg/conceal
 
-go 1.13
+go 1.14
 
 require (
 	github.com/keybase/go-keychain v0.0.0-20200325143049-65d7292bc904
