@@ -10,21 +10,17 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// CheckSecret is a boolean function to verify a secret is present in keychain
-func CheckSecret(account string) {
-	accounts := ListSecrets()
+// SecretExists is a boolean function to verify a secret is present in keychain
+func SecretExists(secretId string) bool {
+	allSecretIds := ListSecrets()
 
-	// Search all the available accounts for this one
-	found := false
-	for _, acc := range accounts {
-		if acc == account {
-			found = true
+	// Search all the available secretIds for this one
+	for _, id := range allSecretIds {
+		if id == secretId {
+			return true
 		}
 	}
-
-	if found == false {
-		log.Fatalf("Account %s not found in keychain. Exiting...\n", account)
-	}
+	return false
 }
 
 // GetSecret is a string function that securely gets the secret value from user
