@@ -19,9 +19,14 @@ func main() {
 	flag.Parse()
 
 	// If an account is not given and version is not requested, error
-	if *account == "" && *version == false && *list == false {
+	if flag.Arg(0) == "" && *version == false && *list == false {
 		flag.PrintDefaults()
 		os.Exit(1)
+	}
+
+	// If an account is given but not set using the -a flag, continue
+	if flag.Arg(0) != "" && *account == "" {
+		*account = flag.Arg(0)
 	}
 
 	// If list is requested, return list of accounts with `Summon` label
