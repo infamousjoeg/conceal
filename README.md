@@ -43,6 +43,10 @@ brew install conceal
 
 ### Add a secret
 
+`$ conceal dockerhub/token`
+
+or
+
 `$ conceal -a dockerhub/token`
 
 To add a secret to Keychain, call `conceal` and use the `-a` argument to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner.
