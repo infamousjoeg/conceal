@@ -3,11 +3,8 @@ package keychain
 import (
 	"fmt"
 	"log"
-	"strings"
-	"syscall"
 
 	"github.com/keybase/go-keychain"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 // SecretExists is a boolean function to verify a secret is present in keychain
@@ -21,19 +18,6 @@ func SecretExists(secretID string) bool {
 		}
 	}
 	return false
-}
-
-// GetSecret is a string function that securely gets the secret value from user
-func GetSecret() string {
-	fmt.Println("Please enter the secret value: ")
-	byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		log.Fatalln("An error occurred trying to read password from " +
-			"Stdin. Exiting...")
-	}
-	secret := string(byteSecretVal)
-
-	return strings.TrimSpace(secret)
 }
 
 // ListSecrets is a string array function that returns all secrets in keychain
@@ -50,9 +34,8 @@ func ListSecrets() []string {
 
 // AddSecret is a non-return function that adds the secret and secret value to
 // keychain.
-func AddSecret(secretID string) {
+func AddSecret(secretID string, secret []byte) {
 	// Add new generic password item to keychain
-	secret := []byte(GetSecret())
 	item := keychain.NewGenericPassword(
 		"summon", secretID, "summon", secret, "",
 	)
