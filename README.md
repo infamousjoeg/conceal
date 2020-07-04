@@ -15,6 +15,12 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Remove a secret](#remove-a-secret)
   - [Display Help](#display-help)
   - [Display Version](#display-version)
+- [keychain.go Package](#keychaingo-package)
+  - [Usage](#usage-1)
+    - [func  AddSecret](#func-addsecret)
+    - [func  DeleteSecret](#func-deletesecret)
+    - [func  ListSecrets](#func-listsecrets)
+    - [func  SecretExists](#func-secretexists)
 - [Maintainer](#maintainer)
 - [Contributions](#contributions)
 - [License](#license)
@@ -80,6 +86,45 @@ To display the help message, just call `conceal` with no arguments.
 `$ conceal -v`
 
 To display the current version, call `conceal` with the `-v` argument.
+
+## keychain.go Package
+
+```golang
+import "github.com/infamousjoeg/conceal/pkg/conceal/keychain"
+```
+
+
+### Usage
+
+#### func  AddSecret
+
+```go
+func AddSecret(secretID string, secret []byte)
+```
+AddSecret is a non-return function that adds the secret and secret value to
+keychain.
+
+#### func  DeleteSecret
+
+```go
+func DeleteSecret(secretID string)
+```
+DeleteSecret is a non-return function that removes the secret from keychain
+
+#### func  ListSecrets
+
+```go
+func ListSecrets() []string
+```
+ListSecrets is a string array function that returns all secrets in keychain with
+the label `summon`.
+
+#### func  SecretExists
+
+```go
+func SecretExists(secretID string) bool
+```
+SecretExists is a boolean function to verify a secret is present in keychain
 
 ## Maintainer
 
