@@ -11,6 +11,7 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Manual](#manual)
 - [Usage](#usage)
   - [Add a secret](#add-a-secret)
+  - [Get a secret value](#get-a-secret-value)
   - [List Summon secrets](#list-summon-secrets)
   - [Remove a secret](#remove-a-secret)
   - [Display Help](#display-help)
@@ -43,49 +44,51 @@ brew install conceal
 1. Download the latest release available at [GitHub Releases](https://github.com/infamousjoeg/go-conceal/releases).
 2. Move the `conceal` executable file to a directory in your `PATH`. (I use `~/bin`.)
 3. In Terminal, run the following command to make sure it's in your `PATH`: \
-   `$ conceal -v`
+   `$ conceal`
 
 ## Usage
 
 ### Add a secret
 
-`$ conceal dockerhub/token`
+`$ conceal set dockerhub/token`
 
-or
+To add a secret to Keychain, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner.
 
-`$ conceal -a dockerhub/token`
+### Get a secret value
 
-To add a secret to Keychain, call `conceal` and use the `-a` argument to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner.
+`$ conceal get dockerhub/token`
+
+To retrieve a secret from Keychain, call `conceal` and use the `get` command to pass the account name to retrieve from. The secret value will be added to your clipboard for 15 seconds.
 
 ### List Summon secrets
 
-`$ conceal -l`
+`$ conceal list`
 
-To list all secrets associated with Summon in Keychain, call `conceal` and use the `-l` argument to list all accounts present.
+To list all secrets associated with Summon in Keychain, call `conceal` and use the `list` command to list all accounts present.
 
-To filter the list further, pipe to `grep` like this `$ conceal -l | grep dockerhub/`.
+To filter the list further, pipe to `grep` like this `$ conceal list | grep dockerhub/`.
 
 ### Remove a secret
 
-`$ conceal dockerhub/token -r`
+`$ conceal unset dockerhub/token`
 
-or
-
-`$ conceal -a dockerhub/token -r`
-
-To remove a secret that was added for Summon, call `conceal` and use the `-a` argument to pass the account name to remove. The additional `-r` argument tells `conceal` to remove the secret instead of add.
+To remove a secret that was added for Summon, call `conceal` and use the `unset` command to pass the account name to remove.
 
 ### Display Help
 
-`$ conceal`
+`$ conceal help`
 
-To display the help message, just call `conceal` with no arguments.
+To display the help message, just call `conceal help`.
+
+`$ conceal help [COMMAND]`
+
+To display the help message for a specific command, just call `conceal help` and provide the command name, such as `set` or `get`.
 
 ### Display Version
 
-`$ conceal -v`
+`$ conceal version`
 
-To display the current version, call `conceal` with the `-v` argument.
+To display the current version, call `conceal` with the `version` command.
 
 ## keychain.go Package
 
