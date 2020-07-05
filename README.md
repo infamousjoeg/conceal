@@ -16,12 +16,16 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Remove a secret](#remove-a-secret)
   - [Display Help](#display-help)
   - [Display Version](#display-version)
-- [keychain.go Package](#keychaingo-package)
+- [keychain Package](#keychain-package)
   - [Usage](#usage-1)
     - [func  AddSecret](#func-addsecret)
     - [func  DeleteSecret](#func-deletesecret)
     - [func  ListSecrets](#func-listsecrets)
     - [func  SecretExists](#func-secretexists)
+- [clipboard Package](#clipboard-package)
+  - [Usage](#usage-2)
+    - [func  Secret](#func-secret)
+    - [func  SetupCloseHandler](#func-setupclosehandler)
 - [Maintainer](#maintainer)
 - [Contributions](#contributions)
 - [License](#license)
@@ -90,12 +94,11 @@ To display the help message for a specific command, just call `conceal help` and
 
 To display the current version, call `conceal` with the `version` command.
 
-## keychain.go Package
+## keychain Package
 
-```golang
+```go
 import "github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 ```
-
 
 ### Usage
 
@@ -128,6 +131,32 @@ the label `summon`.
 func SecretExists(secretID string) bool
 ```
 SecretExists is a boolean function to verify a secret is present in keychain
+
+## clipboard Package
+
+```go
+import "github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
+```
+
+### Usage
+
+#### func  Secret
+
+```go
+func Secret(secret string)
+```
+Secret is a non-return function that adds content to the host clipboard that
+persists for 15 seconds. If a signal interrupt is detected, the content is
+immediately cleared.
+
+#### func  SetupCloseHandler
+
+```go
+func SetupCloseHandler()
+```
+SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
+program if it receives an interrupt from the OS. We then handle this by calling
+our clean up procedure and exiting the program.
 
 ## Maintainer
 
