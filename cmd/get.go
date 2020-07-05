@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +16,7 @@ The secret value is copied to the clipboard for 15 seconds.
 	$ conceal get aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("get called with argument: %s\n", args[0])
+		keychain.GetSecret(args[0])
 	},
 }
 

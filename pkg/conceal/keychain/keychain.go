@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 	"github.com/keybase/go-keychain"
 )
 
@@ -68,10 +69,9 @@ func AddSecret(secretID string, secret []byte) {
 	}
 
 	fmt.Printf("Added %s successfully to keychain.\n", secretID)
-	return
 }
 
-// DeleteSecret is a non-return function that removes the secret from keychain
+// DeleteSecret is a non-return function that removes the secret from keychain.
 func DeleteSecret(secretID string) {
 	err := keychain.DeleteGenericPasswordItem("summon", secretID)
 	if err != nil {
@@ -83,5 +83,35 @@ func DeleteSecret(secretID string) {
 	}
 
 	fmt.Printf("Removed %s successfully from keychain.\n", secretID)
-	return
+}
+
+// GetSecret is a non-return function that retrieves a secret and immediately
+// adds it to the host clipboard for 15 seconds.
+func GetSecret(secretID string) {
+	// Build query for secret retrieval from Keychain
+	query := keychain.NewItem()
+	query.SetSecClass(keychain.SecClassGenericPassword)
+	query.SetService("summon")
+	query.SetAccount(secretID)
+	query.SetMatchLimit(keychain.MatchLimitOne)
+	query.SetReturnData(true)
+	results, err := keychain.QueryItem(query)
+	if err != nil {
+		// Error occurred
+		log.Fatalf(
+			"An error occurred trying to get secret from " +
+				"keychain.\n Exiting...\n",
+		)
+	} else if len(results) != 1 {
+		// Not found
+		log.Fatalf(
+			"An error occurred trying to get secret from "+
+				"keychain.\n  Secret '%s' not found in keychain. Exiting...\n",
+			secretID,
+		)
+	} else {
+		password := string(results[0].Data)
+		clipboard.Secret(password)
+		fmt.Printf("The password is: %s", password)
+	}
 }
