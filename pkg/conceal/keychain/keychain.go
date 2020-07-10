@@ -112,6 +112,5 @@ func GetSecret(secretID string) {
 	} else {
 		password := string(results[0].Data)
 		clipboard.Secret(password)
-		fmt.Printf("The password is: %s", password)
 	}
 }
