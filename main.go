@@ -15,8 +15,16 @@ limitations under the License.
 */
 package main
 
-import "github.com/infamousjoeg/conceal/cmd"
+import (
+	"log"
+	"runtime"
+
+	"github.com/infamousjoeg/conceal/cmd"
+)
 
 func main() {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		log.Fatalln("Unsupported Operating System detected. Exiting...")
+	}
 	cmd.Execute()
 }

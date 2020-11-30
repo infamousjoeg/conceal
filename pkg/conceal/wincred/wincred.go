@@ -84,7 +84,7 @@ func GetSecret(secretID string) {
 		// Error occurred
 		log.Fatalf(
 			"An error occurred trying to get secret from " +
-				"keychain.\n Exiting...\n",
+				"Windows Credential Manager.\n Exiting...\n",
 		)
 	} else {
 		password := string(results.CredentialBlob)
