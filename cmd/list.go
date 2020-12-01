@@ -2,10 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"runtime"
 
-	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/infamousjoeg/conceal/pkg/conceal/wincred"
 	"github.com/spf13/cobra"
 )
@@ -19,21 +16,10 @@ var listCmd = &cobra.Command{
 	Example Usage:
 	$ conceal list`,
 	Run: func(cmd *cobra.Command, args []string) {
-		switch runtime.GOOS {
-		case "windows":
-			accounts := wincred.ListSecrets()
-			fmt.Println("The following credentials are in Windows Credential Manager:")
-			for account := range accounts {
-				fmt.Println(accounts[account].TargetName)
-			}
-		case "darwin":
-			accounts := keychain.ListSecrets()
-			fmt.Println("The following Summon accounts are in keychain:")
-			for account := range accounts {
-				fmt.Println(accounts[account])
-			}
-		default:
-			log.Fatalf("Unsupported Operating System: %s\n", runtime.GOOS)
+		accounts := wincred.ListSecrets()
+		fmt.Println("The following credentials are in Windows Credential Manager:")
+		for account := range accounts {
+			fmt.Println(accounts[account].TargetName)
 		}
 	},
 }

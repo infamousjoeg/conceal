@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"log"
-	"runtime"
-
-	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/infamousjoeg/conceal/pkg/conceal/wincred"
 	"github.com/spf13/cobra"
 )
@@ -19,14 +15,7 @@ var unsetCmd = &cobra.Command{
 	$ conceal unset aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		switch runtime.GOOS {
-		case "windows":
-			wincred.DeleteSecret(args[0])
-		case "darwin":
-			keychain.DeleteSecret(args[0])
-		default:
-			log.Fatalf("Unsupported Operating System: %s\n", runtime.GOOS)
-		}
+		wincred.DeleteSecret(args[0])
 	},
 }
 

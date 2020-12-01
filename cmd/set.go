@@ -3,10 +3,8 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"runtime"
 	"syscall"
 
-	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/infamousjoeg/conceal/pkg/conceal/wincred"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -22,32 +20,16 @@ var setCmd = &cobra.Command{
 	$ conceal set aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		switch runtime.GOOS {
-		case "windows":
-			// Get secret value from STDIN
-			fmt.Println("Please enter the secret value: ")
-			byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				log.Fatalln("An error occurred trying to read password from " +
-					"Stdin. Exiting...")
-			}
-
-			// Add secret and secret value to Windows Credential Manager
-			wincred.AddSecret(args[0], byteSecretVal)
-		case "darwin":
-			// Get secret value from STDIN
-			fmt.Println("Please enter the secret value: ")
-			byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				log.Fatalln("An error occurred trying to read password from " +
-					"Stdin. Exiting...")
-			}
-
-			// Add secret and secret value to keychain
-			keychain.AddSecret(args[0], byteSecretVal)
-		default:
-			log.Fatalf("Unsupported Operating System: %s\n", runtime.GOOS)
+		// Get secret value from STDIN
+		fmt.Println("Please enter the secret value: ")
+		byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			log.Fatalln("An error occurred trying to read password from " +
+				"Stdin. Exiting...")
 		}
+
+		// Add secret and secret value to Windows Credential Manager
+		wincred.AddSecret(args[0], byteSecretVal)
 	},
 }
 
