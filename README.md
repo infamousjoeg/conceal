@@ -40,7 +40,7 @@ Conceal is a command-line utility that eases the interaction between developer a
 
 ```shell
 brew tap infamousjoeg/tap
-brew install -s conceal
+brew install conceal
 ```
 
 ### Manual
