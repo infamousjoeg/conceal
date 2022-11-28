@@ -37,7 +37,5 @@ func AddSecret(secretID string, secret []byte) error {
 		return fmt.Errorf("secret %s not found in keychain", secret)
 	}
 
-	fmt.Printf("Added %s successfully to keychain.\n", secretID)
-
 	return nil
 }

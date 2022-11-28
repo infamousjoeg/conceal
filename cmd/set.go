@@ -32,6 +32,8 @@ var setCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
+
+		fmt.Printf("Added %s successfully to keychain.\n", args[0])
 	},
 }
 

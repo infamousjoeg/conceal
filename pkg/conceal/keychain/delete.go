@@ -13,7 +13,5 @@ func DeleteSecret(secretID string) error {
 		return fmt.Errorf("an error occurred trying to remove secret from keychain. secret '%s' not found in keychain", secretID)
 	}
 
-	fmt.Printf("Removed %s successfully from keychain.\n", secretID)
-
 	return nil
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
@@ -21,6 +22,8 @@ var unsetCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
+
+		fmt.Printf("Removed %s successfully from keychain.\n", args[0])
 	},
 }
 
