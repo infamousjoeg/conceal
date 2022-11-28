@@ -13,19 +13,21 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Add a secret](#add-a-secret)
   - [Get a secret value](#get-a-secret-value)
   - [List Summon secrets](#list-summon-secrets)
+  - [Update a secret](#update-a-secret)
   - [Remove a secret](#remove-a-secret)
   - [Display Help](#display-help)
   - [Display Version](#display-version)
 - [keychain Package](#keychain-package)
   - [Usage](#usage-1)
-    - [func  AddSecret](#func-addsecret)
-    - [func  DeleteSecret](#func-deletesecret)
-    - [func  ListSecrets](#func-listsecrets)
-    - [func  SecretExists](#func-secretexists)
+    - [func AddSecret](#func-addsecret)
+    - [func UpdateSecret](#func-updatesecret)
+    - [func DeleteSecret](#func-deletesecret)
+    - [func ListSecrets](#func-listsecrets)
+    - [func SecretExists](#func-secretexists)
 - [clipboard Package](#clipboard-package)
   - [Usage](#usage-2)
-    - [func  Secret](#func-secret)
-    - [func  SetupCloseHandler](#func-setupclosehandler)
+    - [func Secret](#func-secret)
+    - [func SetupCloseHandler](#func-setupclosehandler)
 - [Maintainer](#maintainer)
 - [Contributions](#contributions)
 - [License](#license)
@@ -72,6 +74,12 @@ To list all secrets associated with Summon in Keychain, call `conceal` and use t
 
 To filter the list further, pipe to `grep` like this `$ conceal list | grep dockerhub/`.
 
+### Update a secret
+
+`$ conceal update dockerhub/token`
+
+To update a secret existing in Keychain, call `conceal` and use the `update` command to pass the account name to update. You will be immediately prompted to provide a secret value in a secure manner.
+
 ### Remove a secret
 
 `$ conceal unset dockerhub/token`
@@ -102,7 +110,7 @@ import "github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 
 ### Usage
 
-#### func  AddSecret
+#### func AddSecret
 
 ```go
 func AddSecret(secretID string, secret []byte)
@@ -110,14 +118,21 @@ func AddSecret(secretID string, secret []byte)
 AddSecret is a non-return function that adds the secret and secret value to
 keychain.
 
-#### func  DeleteSecret
+#### func UpdateSecret
+
+```go
+func UpdateSecret(secretID string, secret []byte)
+```
+UpdateSecret is a non-return function that updates an existing secret's secret value.
+
+#### func DeleteSecret
 
 ```go
 func DeleteSecret(secretID string)
 ```
 DeleteSecret is a non-return function that removes the secret from keychain
 
-#### func  ListSecrets
+#### func ListSecrets
 
 ```go
 func ListSecrets() []string
@@ -125,7 +140,7 @@ func ListSecrets() []string
 ListSecrets is a string array function that returns all secrets in keychain with
 the label `summon`.
 
-#### func  SecretExists
+#### func SecretExists
 
 ```go
 func SecretExists(secretID string) bool
@@ -140,7 +155,7 @@ import "github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 
 ### Usage
 
-#### func  Secret
+#### func Secret
 
 ```go
 func Secret(secret string)
@@ -149,7 +164,7 @@ Secret is a non-return function that adds content to the host clipboard that
 persists for 15 seconds. If a signal interrupt is detected, the content is
 immediately cleared.
 
-#### func  SetupCloseHandler
+#### func SetupCloseHandler
 
 ```go
 func SetupCloseHandler()
