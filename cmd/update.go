@@ -32,11 +32,12 @@ var updateCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
+		fmt.Printf("Successfully updated secret value for %s in keychain.\n", args[0])
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(setCmd)
+	rootCmd.AddCommand(updateCmd)
 
 	// Here you will define your flags and configuration settings.
 
