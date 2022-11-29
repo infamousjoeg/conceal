@@ -24,12 +24,16 @@ var setCmd = &cobra.Command{
 		fmt.Println("Please enter the secret value: ")
 		byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			log.Fatalln("An error occurred trying to read password from " +
-				"Stdin. Exiting...")
+			log.Fatalln("an error occurred trying to read password from Stdin")
 		}
 
 		// Add secret and secret value to keychain
-		keychain.AddSecret(args[0], byteSecretVal)
+		err = keychain.AddSecret(args[0], byteSecretVal)
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+
+		fmt.Printf("Added %s successfully to keychain.\n", args[0])
 	},
 }
 

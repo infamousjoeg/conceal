@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +18,12 @@ var unsetCmd = &cobra.Command{
 	$ conceal unset aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		keychain.DeleteSecret(args[0])
+		err := keychain.DeleteSecret(args[0])
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
+
+		fmt.Printf("Removed %s successfully from keychain.\n", args[0])
 	},
 }
 

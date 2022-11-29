@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
@@ -16,7 +17,10 @@ var listCmd = &cobra.Command{
 	Example Usage:
 	$ conceal list`,
 	Run: func(cmd *cobra.Command, args []string) {
-		accounts := keychain.ListSecrets()
+		accounts, err := keychain.ListSecrets()
+		if err != nil {
+			log.Fatalf("%s", err)
+		}
 		fmt.Println("The following Summon accounts are in keychain:")
 		for account := range accounts {
 			fmt.Println(accounts[account])
