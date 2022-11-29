@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
+	"strings"
 	"syscall"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
@@ -20,6 +23,25 @@ var updateCmd = &cobra.Command{
 	$ conceal update aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Check if input is coming from a pipe
+		if isInputFromPipe() {
+			// Read from pipe
+			byteSecretVal, err := io.ReadAll(os.Stdin)
+			if err != nil {
+				log.Fatalf("%s %s", stdinErrMsg, err)
+			}
+			byteSecretVal = []byte(strings.TrimSuffix(string(byteSecretVal), "\n"))
+
+			// Add secret and secret value to keychain
+			err = keychain.UpdateSecret(args[0], byteSecretVal)
+			if err != nil {
+				log.Fatalf("%s", err)
+			}
+
+			fmt.Printf("Successfully updated secret value for %s in keychain.\n", args[0])
+			os.Exit(1)
+		}
+
 		// Get secret value from STDIN
 		fmt.Println("Please enter the secret value: ")
 		byteSecretVal, err := terminal.ReadPassword(int(syscall.Stdin))

@@ -2,11 +2,19 @@ package cmd
 
 import (
 	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
 
 var cfgFile string
+
+const stdinErrMsg = "failed to read from stdin."
+
+func isInputFromPipe() bool {
+	stat, _ := os.Stdin.Stat()
+	return (stat.Mode() & os.ModeCharDevice) == 0
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
