@@ -1,35 +1,35 @@
 package cmd
 
 import (
+	"os"
+
+	"github.com/infamousjoeg/conceal/pkg/conceal"
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
 )
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Retrieves and copies secret value to clipboard",
+	Use:     "get",
+	Aliases: []string{"cp", "retrieve"},
+	Short:   "Retrieves and copies secret value to clipboard",
 	Long: `Retrieves and copies the secret name provided's secret value.
 The secret value is copied to the clipboard for 15 seconds.
 
 	Example Usage:
 	$ conceal get aws/access_key_id`,
-	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		keychain.GetSecret(args[0])
+		secretName := conceal.GetSecretName(args)
+		conceal.PrintInfo("Adding secret value to clipboard for 15 seconds...")
+		err := keychain.GetSecret(secretName, "clipboard")
+		if err != nil {
+			conceal.PrintError("Failed to get secret value from keychain.")
+			os.Exit(1)
+		}
+		conceal.PrintSuccess("Secret cleared from clipboard.")
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// getCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// getCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
