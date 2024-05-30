@@ -18,14 +18,24 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Display Version](#display-version)
 - [keychain Package](#keychain-package)
   - [Usage](#usage-1)
-    - [func  AddSecret](#func-addsecret)
-    - [func  DeleteSecret](#func-deletesecret)
-    - [func  ListSecrets](#func-listsecrets)
-    - [func  SecretExists](#func-secretexists)
+    - [func  AddSecret](#func--addsecret)
+    - [func  DeleteSecret](#func--deletesecret)
+    - [func  ListSecrets](#func--listsecrets)
+    - [func  SecretExists](#func--secretexists)
 - [clipboard Package](#clipboard-package)
   - [Usage](#usage-2)
-    - [func  Secret](#func-secret)
-    - [func  SetupCloseHandler](#func-setupclosehandler)
+    - [func  Secret](#func--secret)
+    - [func  SetupCloseHandler](#func--setupclosehandler)
+- [Concept](#concept)
+  - [Why Choose Conceal for Your Secret Management Needs?](#why-choose-conceal-for-your-secret-management-needs)
+    - [**Leverage Existing Tools**](#leverage-existing-tools)
+    - [**Seamless Integration with Summon**](#seamless-integration-with-summon)
+    - [**Establish Secure Coding Practices Early**](#establish-secure-coding-practices-early)
+    - [**Avoid Technical Debt**](#avoid-technical-debt)
+    - [**Cost-Effective Solution**](#cost-effective-solution)
+  - [Key Features of Conceal](#key-features-of-conceal)
+  - [How to Get Started with Conceal](#how-to-get-started-with-conceal)
+  - [Conclusion](#conclusion)
 - [Maintainer](#maintainer)
 - [Contributions](#contributions)
 - [License](#license)
@@ -157,6 +167,49 @@ func SetupCloseHandler()
 SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
 program if it receives an interrupt from the OS. We then handle this by calling
 our clean up procedure and exiting the program.
+
+## Concept
+
+### Why Choose Conceal for Your Secret Management Needs?
+
+In modern software development, securely managing secrets (such as API keys, passwords, and other sensitive data) is crucial. Conceal, developed by Joe Garcia, is a powerful utility designed to simplify and secure the management of these secrets. Here’s why you should consider using Conceal:
+
+#### **Leverage Existing Tools**
+**"Why not use what Steve and Bill gave us?"**
+- Conceal allows developers to use built-in tools and environments (like macOS Keychain) to manage secrets without needing to commit any code or set up a dedicated secrets manager initially. This means you can start development immediately without additional setup overhead.
+
+#### **Seamless Integration with Summon**
+- Conceal works seamlessly with Summon, a tool that injects secrets as environment variables into your applications. This allows for easy transitioning between different environments without changing the code. As you move from development to staging to production, the secrets provider can change without any code modification, enhancing flexibility and security.
+
+#### **Establish Secure Coding Practices Early**
+**"You're establishing secure coding habits by starting development using environment variables out of the gate."**
+- By using Conceal and Summon together, you adopt best practices from the start. Managing secrets via environment variables is a secure method that avoids hardcoding sensitive information in your application code, thus preventing technical debt and security vulnerabilities.
+
+#### **Avoid Technical Debt**
+**"...instead of creating technical debt that then becomes a problem later on down the line when a secrets manager needs to be baked into it."**
+- Starting with good practices means you won't need to refactor your code later to integrate a secrets manager. Conceal helps avoid this costly and time-consuming process by providing a secure solution from the beginning.
+
+#### **Cost-Effective Solution**
+**"Free or overpay, which do you choose?"**
+- Conceal leverages free, existing tools, avoiding the need for expensive enterprise secrets management solutions. This makes it a cost-effective choice, especially for startups and small teams.
+
+### Key Features of Conceal
+
+1. **Local Development-Friendly**: Ideal for local development environments where access to a full secrets management system might not be available.
+2. **Ease of Use**: Simple commands to set and retrieve secrets, integrated smoothly with the development workflow.
+3. **Security**: Ensures that secrets are not hardcoded, reducing the risk of accidental exposure.
+
+### How to Get Started with Conceal
+
+1. **Install Conceal**: Follow the instructions in the [Conceal GitHub repository](https://github.com/infamousjoeg/conceal) to install the utility.
+2. **Set Secrets**: Use the `conceal set` command to securely store your secrets.
+3. **Retrieve Secrets**: Integrate with Summon to retrieve secrets as environment variables in your application.
+
+### Conclusion
+
+Conceal is a powerful and useful utility for any developer looking to securely manage secrets without incurring additional setup costs or creating technical debt. By integrating with existing tools and promoting secure practices from the start, Conceal ensures your development process remains efficient, secure, and cost-effective. Choose Conceal to simplify your secret management and focus on building great software.
+
+For more information and to get started, visit the [Conceal GitHub page](https://github.com/infamousjoeg/conceal).
 
 ## Maintainer
 
