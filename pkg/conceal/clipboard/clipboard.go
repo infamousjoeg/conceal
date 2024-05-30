@@ -1,7 +1,6 @@
 package clipboard
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -35,7 +34,6 @@ func Secret(secret string) {
 	clipboard.WriteAll(secret)
 
 	// Sleep for 15 seconds
-	fmt.Println("Added secret value to clipboard for 15 seconds...")
 	time.Sleep(15 * time.Second)
 
 	// Clear clipboard
