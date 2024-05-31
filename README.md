@@ -1,6 +1,6 @@
 # Conceal <!-- omit in toc -->
 
-Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain is added using Summon-compliant formatting.
+Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain is added using Summon-compliant formatting. If you don't plan on using Summon, it's still a great Keychain management tool.
 
 [![](https://github.com/infamousjoeg/conceal/workflows/Go/badge.svg?branch=master)](https://github.com/infamousjoeg/conceal/actions?query=workflow%3AGo) [![](https://img.shields.io/github/downloads/infamousjoeg/conceal/latest/total?color=blue&label=Download%20Latest%20Release&logo=github)](https://github.com/infamousjoeg/conceal/releases/latest)
 
@@ -11,9 +11,12 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Manual](#manual)
 - [Usage](#usage)
   - [Add a secret](#add-a-secret)
+  - [Update a secret](#update-a-secret)
   - [Get a secret value](#get-a-secret-value)
   - [List Summon secrets](#list-summon-secrets)
   - [Remove a secret](#remove-a-secret)
+  - [Install Conceal as Summon Provider](#install-conceal-as-summon-provider)
+  - [Show a secret](#show-a-secret)
   - [Display Help](#display-help)
   - [Display Version](#display-version)
 - [keychain Package](#keychain-package)
@@ -22,6 +25,8 @@ Conceal is a command-line utility that eases the interaction between developer a
     - [func  DeleteSecret](#func--deletesecret)
     - [func  ListSecrets](#func--listsecrets)
     - [func  SecretExists](#func--secretexists)
+    - [func  UpdateSecret](#func--updatesecret)
+    - [func  GetSecret](#func--getsecret)
 - [clipboard Package](#clipboard-package)
   - [Usage](#usage-2)
     - [func  Secret](#func--secret)
@@ -55,7 +60,7 @@ brew install conceal
 
 ### Manual
 
-1. Download the latest release available at [GitHub Releases](https://github.com/infamousjoeg/go-conceal/releases).
+1. Download the latest release available at [GitHub Releases](https://github.com/infamousjoeg/conceal/releases).
 2. Move the `conceal` executable file to a directory in your `PATH`. (I use `~/bin`.)
 3. In Terminal, run the following command to make sure it's in your `PATH`: \
    `$ conceal`
@@ -65,8 +70,16 @@ brew install conceal
 ### Add a secret
 
 `$ conceal set dockerhub/token`
+`$ echo "my-secret-value" | conceal set dockerhub/token`
 
-To add a secret to Keychain, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner.
+To add a secret to Keychain, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
+
+### Update a secret
+
+`$ conceal update dockerhub/token`
+`$ echo "my-new-secret-value" | conceal update dockerhub/token`
+
+To update a secret in Keychain, call `conceal` and use the `update` command to pass the account name to update. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
 
 ### Get a secret value
 
@@ -87,6 +100,20 @@ To filter the list further, pipe to `grep` like this `$ conceal list | grep dock
 `$ conceal unset dockerhub/token`
 
 To remove a secret that was added for Summon, call `conceal` and use the `unset` command to pass the account name to remove.
+
+### Install Conceal as Summon Provider
+
+`$ conceal summon install`
+
+To install Conceal as a Summon provider, call `conceal` with the `summon install` command. This will install `conceal` as an available provider for Summon under the name `conceal_summon`. For more information about Summon's providers, check out the documentation at [cyberark.github.io/summon](https://cyberark.github.io/summon).
+
+### Show a secret
+
+**Note: This command is not recommended for use in scripts as it will print the secret to the terminal. It is only available for the Summon provider integration.**
+
+`$ conceal show dockerhub/token`
+
+To display a secret from Keychain to STDOUT, call `conceal` and use the `show` command to pass the account name to display. This is useful for debugging and testing purposes. It is used by Summon to retrieve the secret value from the `conceal_summon` provider.
 
 ### Display Help
 
@@ -125,7 +152,7 @@ keychain.
 ```go
 func DeleteSecret(secretID string)
 ```
-DeleteSecret is a non-return function that removes the secret from keychain
+DeleteSecret is a non-return function that removes the secret from keychain.
 
 #### func  ListSecrets
 
@@ -140,7 +167,21 @@ the label `summon`.
 ```go
 func SecretExists(secretID string) bool
 ```
-SecretExists is a boolean function to verify a secret is present in keychain
+SecretExists is a boolean function to verify a secret is present in keychain.
+
+#### func  UpdateSecret
+
+```go
+func UpdateSecret(secretID string, secret []byte)
+```
+UpdateSecret is a non-return function that updates the secret value in keychain.
+
+#### func  GetSecret
+
+```go
+func GetSecret(secretID string, delivery string)
+```
+GetSecret is a non-return function that retrieves the secret value from keychain and delivers it in the declared method. If `delivery` is set to `clipboard`, the secret value is copied to the clipboard. If a signal interrupt is detected, the content is immediately cleared. If `delivery` is set to `stdout`, the secret value is printed to the terminal.
 
 ## clipboard Package
 
