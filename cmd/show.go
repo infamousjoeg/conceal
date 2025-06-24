@@ -18,7 +18,7 @@ var showCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := keychain.GetSecret(args[0], "stdout")
 		if err != nil {
-			conceal.PrintError("Failed to get secret value from keychain.")
+			conceal.PrintError("Failed to get secret value from credential store.")
 		}
 	},
 }

@@ -52,10 +52,10 @@ var updateCmd = &cobra.Command{
 			}
 		}
 
-		// Update secret and secret value in keychain
+		// Update secret and secret value in the credential store
 		err = keychain.UpdateSecret(secretName, byteSecretVal)
 		if err != nil {
-			conceal.PrintError("Failed to update secret value in keychain.")
+			conceal.PrintError("Failed to update secret value in credential store.")
 		}
 
 		conceal.PrintSuccess("Secret value updated successfully.")

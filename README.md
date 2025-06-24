@@ -1,6 +1,6 @@
 # Conceal <!-- omit in toc -->
 
-Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain is added using Summon-compliant formatting. If you don't plan on using Summon, it's still a great Keychain management tool.
+Conceal is a command-line utility that eases the interaction between developer and the host's secret store, such as macOS Keychain, Windows Credential Manager, or the Linux keyring. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into a secret store is added using Summon-compliant formatting. If you don't plan on using Summon, it's still a great secret management tool.
 
 [![](https://github.com/infamousjoeg/conceal/workflows/Go/badge.svg?branch=master)](https://github.com/infamousjoeg/conceal/actions?query=workflow%3AGo) [![](https://img.shields.io/github/downloads/infamousjoeg/conceal/latest/total?color=blue&label=Download%20Latest%20Release&logo=github)](https://github.com/infamousjoeg/conceal/releases/latest)
 
@@ -47,7 +47,7 @@ Conceal is a command-line utility that eases the interaction between developer a
 
 ## Requirements
 
-* MacOS
+* macOS, Windows, or Linux with libsecret support
 
 ## Installation
 
@@ -72,26 +72,26 @@ brew install conceal
 `$ conceal set dockerhub/token`
 `$ echo "my-secret-value" | conceal set dockerhub/token`
 
-To add a secret to Keychain, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
+To add a secret to your OS secret store, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
 
 ### Update a secret
 
 `$ conceal update dockerhub/token`
 `$ echo "my-new-secret-value" | conceal update dockerhub/token`
 
-To update a secret in Keychain, call `conceal` and use the `update` command to pass the account name to update. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
+To update a secret in your OS secret store, call `conceal` and use the `update` command to pass the account name to update. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
 
 ### Get a secret value
 
 `$ conceal get dockerhub/token`
 
-To retrieve a secret from Keychain, call `conceal` and use the `get` command to pass the account name to retrieve from. The secret value will be added to your clipboard for 15 seconds.
+To retrieve a secret from your OS secret store, call `conceal` and use the `get` command to pass the account name to retrieve from. The secret value will be added to your clipboard for 15 seconds.
 
 ### List Summon secrets
 
 `$ conceal list`
 
-To list all secrets associated with Summon in Keychain, call `conceal` and use the `list` command to list all accounts present.
+To list all secrets associated with Summon in the secret store, call `conceal` and use the `list` command to list all accounts present.
 
 To filter the list further, pipe to `grep` like this `$ conceal list | grep dockerhub/`.
 
@@ -113,7 +113,7 @@ To install Conceal as a Summon provider, call `conceal` with the `summon install
 
 `$ conceal show dockerhub/token`
 
-To display a secret from Keychain to STDOUT, call `conceal` and use the `show` command to pass the account name to display. This is useful for debugging and testing purposes. It is used by Summon to retrieve the secret value from the `conceal_summon` provider.
+To display a secret from the secret store to STDOUT, call `conceal` and use the `show` command to pass the account name to display. This is useful for debugging and testing purposes. It is used by Summon to retrieve the secret value from the `conceal_summon` provider.
 
 ### Display Help
 
@@ -136,6 +136,8 @@ To display the current version, call `conceal` with the `version` command.
 ```go
 import "github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 ```
+
+This package provides a unified interface to the underlying credential store. On macOS it interacts with Keychain, on Windows it uses Credential Manager, and on Linux it relies on libsecret.
 
 ### Usage
 
@@ -217,7 +219,7 @@ In modern software development, securely managing secrets (such as API keys, pas
 
 #### **Leverage Existing Tools**
 **"Why not use what Steve and Bill gave us?"**
-- Conceal allows developers to use built-in tools and environments (like macOS Keychain) to manage secrets without needing to commit any code or set up a dedicated secrets manager initially. This means you can start development immediately without additional setup overhead.
+ - Conceal allows developers to use built-in tools and environments (like macOS Keychain, Windows Credential Manager, or the Linux keyring) to manage secrets without needing to commit any code or set up a dedicated secrets manager initially. This means you can start development immediately without additional setup overhead.
 
 #### **Seamless Integration with Summon**
 - Conceal works seamlessly with Summon, a tool that injects secrets as environment variables into your applications. This allows for easy transitioning between different environments without changing the code. As you move from development to staging to production, the secrets provider can change without any code modification, enhancing flexibility and security.

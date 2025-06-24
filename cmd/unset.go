@@ -19,10 +19,10 @@ var unsetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := keychain.DeleteSecret(args[0])
 		if err != nil {
-			conceal.PrintError("Failed to delete secret from keychain.")
+			conceal.PrintError("Failed to delete secret from credential store.")
 		}
 
-		conceal.PrintSuccess("Secret successfully deleted from keychain.")
+		conceal.PrintSuccess("Secret successfully deleted from credential store.")
 	},
 }
 

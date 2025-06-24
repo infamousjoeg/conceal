@@ -18,17 +18,16 @@ var listCmd = &cobra.Command{
 	Example Usage:
 	$ conceal list`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// List all secrets in keychain with service label `summon`
+		// List all secrets stored with the service label `summon`
 		accounts := keychain.ListSecrets()
 
-		conceal.PrintInfo("The following Summon/Conceal accounts are in keychain:")
+		conceal.PrintInfo("The following Summon/Conceal accounts are in the credential store:")
 
 		uniqueAccounts := make(map[string]bool)
 		for _, account := range accounts {
-			value := account.Account
-			if !uniqueAccounts[value] {
-				uniqueAccounts[value] = true
-				fmt.Println(account.Account)
+			if !uniqueAccounts[account] {
+				uniqueAccounts[account] = true
+				fmt.Println(account)
 			}
 		}
 	},

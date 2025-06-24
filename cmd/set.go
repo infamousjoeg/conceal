@@ -29,7 +29,7 @@ var setCmd = &cobra.Command{
 
 		// Check if secret already exists to save the user time
 		if keychain.SecretExists(secretName) {
-			conceal.PrintError("Secret already exists in keychain. Please use `conceal update` instead.")
+			conceal.PrintError("Secret already exists in the credential store. Please use `conceal update` instead.")
 		}
 
 		var byteSecretVal []byte
@@ -55,13 +55,13 @@ var setCmd = &cobra.Command{
 			}
 		}
 
-		// Add secret and secret value to keychain
+		// Add secret and secret value to the OS credential store
 		err = keychain.AddSecret(secretName, byteSecretVal)
 		if err != nil {
-			conceal.PrintError("An error occurred while adding secret to keychain.")
+			conceal.PrintError("An error occurred while adding secret to the credential store.")
 		}
 
-		conceal.PrintSuccess("Secret added to keychain.")
+		conceal.PrintSuccess("Secret added to credential store.")
 	},
 }
 

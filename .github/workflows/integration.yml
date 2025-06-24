@@ -1,0 +1,52 @@
+name: Integration
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main", "v*"]
+
+jobs:
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test ./...
+
+  build-test-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - distro: ubuntu
+            image: ubuntu:24.04
+          - distro: amazon
+            image: amazonlinux:2
+          - distro: rhel
+            image: quay.io/centos/centos:stream9
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Go
+        run: |
+          if [ -f /etc/debian_version ]; then
+            apt-get update && apt-get install -y golang git
+          else
+            (yum install -y golang git || dnf install -y golang git)
+          fi
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test ./...
+

@@ -1,3 +1,5 @@
+//go:build darwin
+
 package keychain
 
 import (
@@ -14,7 +16,7 @@ func SecretExists(secretID string) bool {
 
 	// Search all the available secretIDs for this one
 	for _, account := range allSecretIDs {
-		if account.Account == secretID {
+		if account == secretID {
 			return true
 		}
 	}
@@ -24,7 +26,7 @@ func SecretExists(secretID string) bool {
 
 // ListSecrets is a string array function that returns all secrets in keychain
 // with the label `summon`.
-func ListSecrets() []keychain.QueryResult {
+func ListSecrets() []string {
 	query := keychain.NewItem()
 	query.SetSecClass(keychain.SecClassGenericPassword)
 	query.SetService("summon")
@@ -35,8 +37,11 @@ func ListSecrets() []keychain.QueryResult {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	return secretIDs
+	var accounts []string
+	for _, r := range secretIDs {
+		accounts = append(accounts, r.Account)
+	}
+	return accounts
 }
 
 // AddSecret is a boolean function that adds the secret and secret value to
