@@ -44,6 +44,7 @@ jobs:
             else
               (yum install -y golang git || dnf install -y golang git)
             fi && \
+            go env -w GOPROXY=https://proxy.golang.org,direct && \
             go build -buildvcs=false ./... && \
             go test -buildvcs=false ./...'
 
