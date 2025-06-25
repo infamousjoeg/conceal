@@ -44,5 +44,6 @@ jobs:
             else
               (yum install -y golang git || dnf install -y golang git)
             fi && \
-            go build ./... && go test ./...'
+            go build -buildvcs=false ./... && \
+            go test -buildvcs=false ./...'
 
