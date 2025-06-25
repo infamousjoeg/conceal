@@ -48,6 +48,7 @@ Conceal is a command-line utility that eases the interaction between developer a
 ## Requirements
 
 * macOS, Windows, or Linux with libsecret support
+* Integration tests run on macOS, Windows, Ubuntu 24.04, Amazon Linux 2, and RHEL 9 via GitHub Actions
 
 ## Installation
 

@@ -34,19 +34,15 @@ jobs:
             image: amazonlinux:2
           - distro: rhel
             image: quay.io/centos/centos:stream9
-    container:
-      image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Go
+      - name: Build and Test in container
         run: |
-          if [ -f /etc/debian_version ]; then
-            apt-get update && apt-get install -y golang git
-          else
-            (yum install -y golang git || dnf install -y golang git)
-          fi
-      - name: Build
-        run: go build ./...
-      - name: Test
-        run: go test ./...
+          docker run --rm -v "$PWD:/workspace" -w /workspace ${{ matrix.image }} bash -c '
+            if [ -f /etc/debian_version ]; then
+              apt-get update && apt-get install -y golang git
+            else
+              (yum install -y golang git || dnf install -y golang git)
+            fi && \
+            go build ./... && go test ./...'
 
