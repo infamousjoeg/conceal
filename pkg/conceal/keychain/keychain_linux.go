@@ -66,14 +66,14 @@ func ListSecrets() []string {
 func AddSecret(secretID string, secret []byte) error {
 	_, col, session, err := getCollection()
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred trying to add secret %s to the credential store", secretID)
+		return fmt.Errorf("unexpected error adding secret %s to credential store", secretID)
 	}
 	if SecretExists(secretID) {
-		return fmt.Errorf("Secret %s already exists in credential store. Please use `conceal update` instead.", secretID)
+		return fmt.Errorf("secret %s already exists in credential store; use `conceal update`", secretID)
 	}
 	sec := libsecret.NewSecret(session, nil, secret, "text/plain")
 	if _, err := col.CreateItem(secretID, sec, false); err != nil {
-		return fmt.Errorf("An unexpected error occurred trying to add secret %s to the credential store", secretID)
+		return fmt.Errorf("unexpected error adding secret %s to credential store", secretID)
 	}
 	return nil
 }
@@ -82,14 +82,14 @@ func AddSecret(secretID string, secret []byte) error {
 func DeleteSecret(secretID string) error {
 	_, col, _, err := getCollection()
 	if err != nil {
-		return fmt.Errorf("An error occurred trying to remove secret from credential store. Secret '%s' not found.", secretID)
+		return fmt.Errorf("secret '%s' not found in credential store", secretID)
 	}
 	items, err := col.SearchItems(secretID)
 	if err != nil || len(items) == 0 {
-		return fmt.Errorf("An error occurred trying to remove secret from credential store. Secret '%s' not found.", secretID)
+		return fmt.Errorf("secret '%s' not found in credential store", secretID)
 	}
 	if err := items[0].Delete(); err != nil {
-		return fmt.Errorf("An error occurred trying to remove secret from credential store. Secret '%s' not found.", secretID)
+		return fmt.Errorf("secret '%s' not found in credential store", secretID)
 	}
 	return nil
 }
@@ -98,23 +98,23 @@ func DeleteSecret(secretID string) error {
 func GetSecret(secretID string, delivery string) error {
 	_, col, session, err := getCollection()
 	if err != nil {
-		return fmt.Errorf("An error occurred trying to get secret from credential store. Secret '%s' not found.", secretID)
+		return fmt.Errorf("secret '%s' not found in credential store", secretID)
 	}
 	items, err := col.SearchItems(secretID)
 	if err != nil || len(items) == 0 {
-		return fmt.Errorf("An error occurred trying to get secret from credential store. Secret '%s' not found.", secretID)
+		return fmt.Errorf("secret '%s' not found in credential store", secretID)
 	}
 	sec, err := items[0].GetSecret(session)
 	if err != nil {
-		return fmt.Errorf("An error occurred trying to get secret from credential store. Secret '%s' not found.", secretID)
+		return fmt.Errorf("secret '%s' not found in credential store", secretID)
 	}
 	password := string(sec.Value)
-	if delivery == "clipboard" {
+	switch delivery {
+	case "clipboard":
 		clipboard.Secret(password)
-	} else if delivery == "stdout" {
+	case "stdout":
 		fmt.Printf("%s", password)
 	}
-	password = ""
 	return nil
 }
 
@@ -122,15 +122,15 @@ func GetSecret(secretID string, delivery string) error {
 func UpdateSecret(secretID string, secret []byte) error {
 	_, col, session, err := getCollection()
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred trying to update secret %s in the credential store", secretID)
+		return fmt.Errorf("unexpected error updating secret %s in credential store", secretID)
 	}
 	items, err := col.SearchItems(secretID)
 	if err != nil || len(items) == 0 {
-		return fmt.Errorf("The secret %s does not exist in the credential store. Please use `conceal set` instead.", secretID)
+		return fmt.Errorf("secret %s does not exist in credential store; use `conceal set`", secretID)
 	}
 	sec := libsecret.NewSecret(session, nil, secret, "text/plain")
 	if _, err := col.CreateItem(secretID, sec, true); err != nil {
-		return fmt.Errorf("An unexpected error occurred trying to update secret %s in the credential store", secretID)
+		return fmt.Errorf("unexpected error updating secret %s in credential store", secretID)
 	}
 	return nil
 }

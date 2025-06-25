@@ -1,6 +1,7 @@
 package clipboard
 
 import (
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,12 +14,14 @@ import (
 // program if it receives an interrupt from the OS. We then handle this by calling
 // our clean up procedure and exiting the program.
 func SetupCloseHandler() {
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		// Clear clipboard
-		clipboard.WriteAll("")
+		if err := clipboard.WriteAll(""); err != nil {
+			log.Printf("failed clearing clipboard: %v", err)
+		}
 		os.Exit(0)
 	}()
 }
@@ -31,11 +34,15 @@ func Secret(secret string) {
 	SetupCloseHandler()
 
 	// Write secret to clipboard
-	clipboard.WriteAll(secret)
+	if err := clipboard.WriteAll(secret); err != nil {
+		log.Printf("failed setting clipboard: %v", err)
+	}
 
 	// Sleep for 15 seconds
 	time.Sleep(15 * time.Second)
 
 	// Clear clipboard
-	clipboard.WriteAll("")
+	if err := clipboard.WriteAll(""); err != nil {
+		log.Printf("failed clearing clipboard: %v", err)
+	}
 }

@@ -35,7 +35,9 @@ func GetSecretName(args []string) string {
 	if len(args) == 0 {
 		for secretName == "" {
 			fmt.Println("Please enter the secret name: ")
-			fmt.Scanln(&secretName)
+			if _, err := fmt.Scanln(&secretName); err != nil {
+				log.Println("input error:", err)
+			}
 		}
 	} else {
 		secretName = args[0]
