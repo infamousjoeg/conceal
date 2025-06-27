@@ -12,7 +12,7 @@ var rootCmd = &cobra.Command{
 	Use:   "conceal",
 	Short: "Conceal is a command-line utility that eases the interaction between developer and the OS credential store.",
 	Long: `Conceal is a command-line utility that eases the interaction between
-developer and the OS credential store, such as macOS Keychain or Windows Credential Manager. It is the open-source companion to Summon
+developer and the OS credential store, such as macOS Keychain, Windows Credential Manager, or the Linux keyring. It is the open-source companion to Summon
 as every secret added using this tool is stored using
 Summon-compliant formatting.
 	
