@@ -1,0 +1,27 @@
+project_name: conceal
+release:
+  github:
+    draft: false
+builds:
+  - id: conceal
+    main: ./main.go
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=1
+    ldflags: -s -w
+archives:
+  - id: default
+    builds: [conceal]
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
