@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/infamousjoeg/conceal/pkg/conceal"
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
@@ -17,9 +19,9 @@ var unsetCmd = &cobra.Command{
 	$ conceal unset aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := keychain.DeleteSecret(args[0])
-		if err != nil {
-			conceal.PrintError("Failed to delete secret from credential store.")
+		if err := keychain.DeleteSecret(args[0]); err != nil {
+			conceal.PrintError(fmt.Sprintf("Failed to delete secret from credential store: %v", err))
+			return
 		}
 
 		conceal.PrintSuccess("Secret successfully deleted from credential store.")

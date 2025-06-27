@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/infamousjoeg/conceal/pkg/conceal"
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
@@ -16,9 +18,8 @@ var showCmd = &cobra.Command{
 	$ conceal summon show aws/access_key_id`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := keychain.GetSecret(args[0], "stdout")
-		if err != nil {
-			conceal.PrintError("Failed to get secret value from credential store.")
+		if err := keychain.GetSecret(args[0], "stdout"); err != nil {
+			conceal.PrintError(fmt.Sprintf("Failed to get secret value from credential store: %v", err))
 		}
 	},
 }

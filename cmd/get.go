@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal"
@@ -21,9 +22,8 @@ The secret value is copied to the clipboard for 15 seconds.
 	Run: func(cmd *cobra.Command, args []string) {
 		secretName := conceal.GetSecretName(args)
 		conceal.PrintInfo("Adding secret value to clipboard for 15 seconds...")
-		err := keychain.GetSecret(secretName, "clipboard")
-		if err != nil {
-			conceal.PrintError("Failed to get secret value from credential store.")
+		if err := keychain.GetSecret(secretName, "clipboard"); err != nil {
+			conceal.PrintError(fmt.Sprintf("Failed to get secret value from credential store: %v", err))
 			os.Exit(1)
 		}
 		conceal.PrintSuccess("Secret cleared from clipboard.")

@@ -56,9 +56,9 @@ var setCmd = &cobra.Command{
 		}
 
 		// Add secret and secret value to the OS credential store
-		err = keychain.AddSecret(secretName, byteSecretVal)
-		if err != nil {
-			conceal.PrintError("An error occurred while adding secret to the credential store.")
+		if err := keychain.AddSecret(secretName, byteSecretVal); err != nil {
+			conceal.PrintError(fmt.Sprintf("An error occurred while adding secret to the credential store: %v", err))
+			return
 		}
 
 		conceal.PrintSuccess("Secret added to credential store.")
