@@ -4,29 +4,40 @@ package keychain
 
 import (
 	"fmt"
+	"strings"
 
 	libsecret "github.com/gsterjov/go-libsecret"
 	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 )
 
+func wrapSecretServiceError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), "org.freedesktop.secrets") || strings.Contains(err.Error(), "dbus") {
+		return fmt.Errorf("secret service unavailable; ensure gnome-keyring or another \nsecret storage service is installed and running: %w", err)
+	}
+	return err
+}
+
 func getCollection() (*libsecret.Service, *libsecret.Collection, *libsecret.Session, error) {
 	svc, err := libsecret.NewService()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, wrapSecretServiceError(err)
 	}
 	session, err := svc.Open()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, wrapSecretServiceError(err)
 	}
 	cols, err := svc.Collections()
 	if err != nil || len(cols) == 0 {
-		return nil, nil, nil, fmt.Errorf("no credential collections available")
+		return nil, nil, nil, wrapSecretServiceError(fmt.Errorf("no credential collections available: %w", err))
 	}
 	col := &cols[0]
 	locked, _ := col.Locked()
 	if locked {
 		if err := svc.Unlock(col); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, wrapSecretServiceError(err)
 		}
 	}
 	return svc, col, session, nil
