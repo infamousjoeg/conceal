@@ -24,6 +24,21 @@ func SecretExists(secretID string) bool {
 	return false
 }
 
+// ReadSecret returns the secret value as a string.
+func ReadSecret(secretID string) (string, error) {
+	query := gokeychain.NewItem()
+	query.SetSecClass(gokeychain.SecClassGenericPassword)
+	query.SetService("summon")
+	query.SetAccount(secretID)
+	query.SetMatchLimit(gokeychain.MatchLimitOne)
+	query.SetReturnData(true)
+	results, err := gokeychain.QueryItem(query)
+	if err != nil || len(results) != 1 {
+		return "", fmt.Errorf("secret not found")
+	}
+	return string(results[0].Data), nil
+}
+
 // ListSecrets is a string array function that returns all secrets in keychain
 // with the label `summon`.
 func ListSecrets() []string {

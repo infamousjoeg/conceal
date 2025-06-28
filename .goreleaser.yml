@@ -15,6 +15,17 @@ builds:
     env:
       - CGO_ENABLED=1
     ldflags: -s -w
+  - id: aws-plugin
+    main: ./plugins/aws-secretsmanager/main.go
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=1
 archives:
   - id: default
     builds: [conceal]

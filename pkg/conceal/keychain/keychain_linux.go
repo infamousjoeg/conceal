@@ -53,6 +53,23 @@ func SecretExists(secretID string) bool {
 	return err == nil && len(items) > 0
 }
 
+// ReadSecret returns the secret value as a string.
+func ReadSecret(secretID string) (string, error) {
+	_, col, session, err := getCollection()
+	if err != nil {
+		return "", err
+	}
+	items, err := col.SearchItems(secretID)
+	if err != nil || len(items) == 0 {
+		return "", fmt.Errorf("secret not found")
+	}
+	sec, err := items[0].GetSecret(session)
+	if err != nil {
+		return "", err
+	}
+	return string(sec.Value), nil
+}
+
 // ListSecrets returns all secrets stored by conceal
 func ListSecrets() []string {
 	_, col, _, err := getCollection()

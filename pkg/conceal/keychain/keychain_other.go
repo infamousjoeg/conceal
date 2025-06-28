@@ -14,6 +14,10 @@ func ListSecrets() []string {
 	return []string{}
 }
 
+func ReadSecret(secretID string) (string, error) {
+	return "", fmt.Errorf("unsupported platform")
+}
+
 // AddSecret always returns an error on unsupported platforms.
 func AddSecret(secretID string, secret []byte) error {
 	return fmt.Errorf("conceal: credential store not supported on this OS")

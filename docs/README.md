@@ -13,3 +13,4 @@ information, and security considerations.
 * [Security](security/THREAT-MODEL.md)
 * [Operations](operations/TROUBLESHOOTING.md)
 * [Examples](examples/basic-usage.md)
+* [Migration](../docs/MIGRATION.md)

@@ -65,6 +65,16 @@ Use Conceal as a [Summon](https://cyberark.github.io/summon) provider:
 conceal summon install
 ```
 
+## Secret migration
+
+Export your stored secrets to external providers using plugins:
+
+```bash
+conceal migrate --to aws-secretsmanager
+```
+
+Plugins live in `$XDG_CONFIG_HOME/conceal/plugins`. See [docs/MIGRATION.md](docs/MIGRATION.md).
+
 ## Managing the secret store
 
 Conceal uses your operating system's built in store. Normally there is nothing else you need to do. On Linux you may need to install `libsecret` and run a secret service like `gnome-keyring`. Conceal will report an error if it cannot reach the secret service.

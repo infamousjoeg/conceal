@@ -15,6 +15,15 @@ func SecretExists(secretID string) bool {
 	return err == nil && cred != nil
 }
 
+// ReadSecret returns the secret value as a string.
+func ReadSecret(secretID string) (string, error) {
+	cred, err := wincred.GetGenericCredential(secretID)
+	if err != nil || cred == nil {
+		return "", fmt.Errorf("secret not found")
+	}
+	return string(cred.CredentialBlob), nil
+}
+
 // ListSecrets returns all secrets stored by conceal in Credential Manager
 func ListSecrets() []string {
 	creds, _ := wincred.List()
