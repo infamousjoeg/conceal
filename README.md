@@ -67,13 +67,28 @@ conceal summon install
 
 ## Secret migration
 
-Export your stored secrets to external providers using plugins:
+Conceal can push secrets to other vaults through plugins. Download or build a
+plugin and place it in `$XDG_CONFIG_HOME/conceal/plugins`.
+
+List available providers:
+
+```bash
+conceal provider
+```
+
+Configure one the first time:
+
+```bash
+conceal configure aws-secretsmanager
+```
+
+Migrate everything (use `--dry-run` to preview):
 
 ```bash
 conceal migrate --to aws-secretsmanager
 ```
 
-Plugins live in `$XDG_CONFIG_HOME/conceal/plugins`. See [docs/MIGRATION.md](docs/MIGRATION.md).
+See [docs/MIGRATION.md](docs/MIGRATION.md) for plugin development details.
 
 ## Managing the secret store
 
