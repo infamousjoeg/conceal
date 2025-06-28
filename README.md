@@ -85,8 +85,9 @@ To update a secret in your OS secret store, call `conceal` and use the `update` 
 ### Get a secret value
 
 `$ conceal get dockerhub/token`
+`$ conceal get dockerhub/token --stdout | my-tool`
 
-To retrieve a secret from your OS secret store, call `conceal` and use the `get` command to pass the account name to retrieve from. The secret value will be added to your clipboard for 15 seconds.
+To retrieve a secret from your OS secret store, call `conceal` and use the `get` command to pass the account name to retrieve from. By default the secret value will be added to your clipboard for 15 seconds. If you provide the `--stdout` flag the value is printed so it can be piped to another command.
 
 ### List Summon secrets
 

@@ -10,26 +10,39 @@ import (
 )
 
 // getCmd represents the get command
+var getStdout bool
+
 var getCmd = &cobra.Command{
 	Use:     "get",
 	Aliases: []string{"cp", "retrieve"},
-	Short:   "Retrieves and copies secret value to clipboard",
-	Long: `Retrieves and copies the secret name provided's secret value.
-The secret value is copied to the clipboard for 15 seconds.
+	Short:   "Retrieve a secret",
+	Long: `Retrieves the secret value for the given name. By default the value
+is copied to the clipboard for 15 seconds. Use --stdout to print the value
+directly instead which enables piping to other commands.
 
-	Example Usage:
-	$ conceal get aws/access_key_id`,
+        Example Usage:
+        $ conceal get aws/access_key_id
+        $ conceal get aws/access_key_id --stdout | other-command`,
 	Run: func(cmd *cobra.Command, args []string) {
 		secretName := conceal.GetSecretName(args)
-		conceal.PrintInfo("Adding secret value to clipboard for 15 seconds...")
-		if err := keychain.GetSecret(secretName, "clipboard"); err != nil {
+		delivery := "clipboard"
+		if getStdout {
+			delivery = "stdout"
+			conceal.PrintInfo("Printing secret value to STDOUT...")
+		} else {
+			conceal.PrintInfo("Adding secret value to clipboard for 15 seconds...")
+		}
+		if err := keychain.GetSecret(secretName, delivery); err != nil {
 			conceal.PrintError(fmt.Sprintf("Failed to get secret value from credential store: %v", err))
 			os.Exit(1)
 		}
-		conceal.PrintSuccess("Secret cleared from clipboard.")
+		if !getStdout {
+			conceal.PrintSuccess("Secret cleared from clipboard.")
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getCmd)
+	getCmd.Flags().BoolVar(&getStdout, "stdout", false, "print secret to STDOUT instead of clipboard")
 }
