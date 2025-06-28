@@ -10,6 +10,13 @@ import (
 	"github.com/atotto/clipboard"
 )
 
+// these vars allow tests to stub clipboard and time operations
+var (
+	writeAll = clipboard.WriteAll
+	sleep    = time.Sleep
+	exitFunc = os.Exit
+)
+
 // SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
 // program if it receives an interrupt from the OS. We then handle this by calling
 // our clean up procedure and exiting the program.
@@ -18,11 +25,10 @@ func SetupCloseHandler() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		// Clear clipboard
-		if err := clipboard.WriteAll(""); err != nil {
+		if err := writeAll(""); err != nil {
 			log.Printf("failed clearing clipboard: %v", err)
 		}
-		os.Exit(0)
+		exitFunc(0)
 	}()
 }
 
@@ -34,15 +40,15 @@ func Secret(secret string) {
 	SetupCloseHandler()
 
 	// Write secret to clipboard
-	if err := clipboard.WriteAll(secret); err != nil {
+	if err := writeAll(secret); err != nil {
 		log.Printf("failed setting clipboard: %v", err)
 	}
 
 	// Sleep for 15 seconds
-	time.Sleep(15 * time.Second)
+	sleep(15 * time.Second)
 
 	// Clear clipboard
-	if err := clipboard.WriteAll(""); err != nil {
+	if err := writeAll(""); err != nil {
 		log.Printf("failed clearing clipboard: %v", err)
 	}
 }
