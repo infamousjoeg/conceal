@@ -2,77 +2,24 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"net/rpc"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	smtypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	hclog "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/infamousjoeg/conceal/internal/migrate"
 )
 
-// awsMigrator uploads secrets to AWS Secrets Manager.
-type awsMigrator struct {
-	client *secretsmanager.Client
-	prefix string
-	region string
-}
+// myMigrator demonstrates the Migrator interface.
+type myMigrator struct{}
 
-func (m *awsMigrator) Name() string { return "aws-secretsmanager" }
-
-// Configure prompts for region and prefix then initializes the AWS client.
-func (m *awsMigrator) Configure(ctx context.Context, in io.Reader, out io.Writer) error {
-	var region, prefix string
-	_, _ = fmt.Fprint(out, "AWS region: ")
-	_, _ = fmt.Fscanln(in, &region)
-	_, _ = fmt.Fprint(out, "Secret prefix (optional): ")
-	_, _ = fmt.Fscanln(in, &prefix)
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		return err
-	}
-	m.client = secretsmanager.NewFromConfig(cfg)
-	m.region = region
-	m.prefix = prefix
+func (m *myMigrator) Name() string                                                     { return "example" }
+func (m *myMigrator) Configure(ctx context.Context, in io.Reader, out io.Writer) error { return nil }
+func (m *myMigrator) DefaultRate() int                                                 { return 10 }
+func (m *myMigrator) Put(ctx context.Context, key string, value []byte, meta map[string]string) error {
+	// TODO: write secret to your backend
 	return nil
 }
-
-func (m *awsMigrator) DefaultRate() int { return 10 }
-
-// Put writes a secret to AWS Secrets Manager creating it if necessary.
-func (m *awsMigrator) Put(ctx context.Context, key string, value []byte, meta map[string]string) error {
-	if m.client == nil {
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			return err
-		}
-		m.client = secretsmanager.NewFromConfig(cfg)
-	}
-	name := m.prefix + key
-	_, err := m.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
-		Name:         aws.String(name),
-		SecretBinary: value,
-	})
-	if err != nil {
-		var exists *smtypes.ResourceExistsException
-		if !errors.As(err, &exists) {
-			return err
-		}
-		_, err = m.client.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
-			SecretId:     aws.String(name),
-			SecretBinary: value,
-		})
-		return err
-	}
-	return nil
-}
-
-// RPC definitions follow
 
 type MigratorRPC struct{ impl migrate.Migrator }
 
@@ -126,7 +73,7 @@ func main() {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: plugin.HandshakeConfig{ProtocolVersion: 1},
 		Plugins: map[string]plugin.Plugin{
-			"migrator": &MigratorPlugin{Impl: &awsMigrator{}},
+			"migrator": &MigratorPlugin{Impl: &myMigrator{}},
 		},
 		Logger: hclog.NewNullLogger(),
 	})

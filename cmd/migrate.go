@@ -51,6 +51,8 @@ func init() {
 	migrateCmd.Flags().IntVar(&rate, "rate", 0, "writes per second")
 	migrateCmd.Flags().BoolVar(&contErr, "continue-on-error", false, "keep going after errors")
 	migrateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "show actions without writing")
-	migrateCmd.MarkFlagRequired("to")
+	if err := migrateCmd.MarkFlagRequired("to"); err != nil {
+		panic(err)
+	}
 	rootCmd.AddCommand(migrateCmd)
 }

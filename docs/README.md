@@ -10,6 +10,7 @@ information, and security considerations.
 * [Architecture](architecture/DESIGN.md)
 * [User Guide](user-guide/INSTALLATION.md)
 * [Developer Guide](developer-guide/CONTRIBUTING.md)
+* [Writing Plugins](developer-guide/PLUGIN.md)
 * [Security](security/THREAT-MODEL.md)
 * [Operations](operations/TROUBLESHOOTING.md)
 * [Examples](examples/basic-usage.md)

@@ -46,11 +46,6 @@ func (m *Manager) List() ([]string, error) {
 	return names, nil
 }
 
-type client struct {
-	plugin.ClientProtocol
-	Migrator
-}
-
 func (m *Manager) load(name string) (*plugin.Client, Migrator, error) {
 	path := filepath.Join(m.Dir, name)
 	if _, err := os.Stat(path); err != nil {
@@ -119,9 +114,9 @@ func (m *Manager) MigrateWith(ctx context.Context, mig Migrator, src map[string]
 		}
 	}
 	if len(fails) > 0 {
-		fmt.Fprintln(out, "Failures:")
+		_, _ = fmt.Fprintln(out, "Failures:")
 		for _, f := range fails {
-			fmt.Fprintf(out, "%s: %v\n", f.key, f.err)
+			_, _ = fmt.Fprintf(out, "%s: %v\n", f.key, f.err)
 		}
 		return fmt.Errorf("%d secrets failed", len(fails))
 	}

@@ -20,7 +20,9 @@ func TestRateLimit(t *testing.T) {
 	mgr := &Manager{}
 	mig := nopMigrator{}
 	start := time.Now()
-	mgr.MigrateWith(context.Background(), mig, map[string][]byte{"k": {}}, 2, false, io.Discard)
+	if err := mgr.MigrateWith(context.Background(), mig, map[string][]byte{"k": {}}, 2, false, io.Discard); err != nil {
+		t.Fatal(err)
+	}
 	if time.Since(start) < 500*time.Millisecond {
 		t.Fatalf("no rate limiting")
 	}

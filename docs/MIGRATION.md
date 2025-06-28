@@ -9,4 +9,4 @@ conceal migrate --to aws-secretsmanager
 Use `conceal provider` to list installed plugins. Configure a provider once with
 `conceal configure <name>`.
 
-To develop a new plugin see `plugins/aws-secretsmanager` as a starting point.
+To develop a new plugin copy `plugins/template` and see `plugins/aws-secretsmanager` for a full example.
