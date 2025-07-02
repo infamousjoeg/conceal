@@ -2,8 +2,10 @@ package migrate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,6 +37,9 @@ func NewManager() *Manager {
 func (m *Manager) List() ([]string, error) {
 	entries, err := os.ReadDir(m.Dir)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	var names []string
@@ -44,6 +49,21 @@ func (m *Manager) List() ([]string, error) {
 		}
 	}
 	return names, nil
+}
+
+func (m *Manager) Install(src string) error {
+	if err := os.MkdirAll(m.Dir, 0o755); err != nil {
+		return err
+	}
+	in, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	dst := filepath.Join(m.Dir, filepath.Base(src))
+	if err := os.WriteFile(dst, in, 0o755); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *Manager) load(name string) (*plugin.Client, Migrator, error) {

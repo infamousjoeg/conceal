@@ -68,9 +68,10 @@ conceal summon install
 ## Secret migration
 
 Conceal can push secrets to other vaults through plugins. Download or build a
-plugin and place it in `$XDG_CONFIG_HOME/conceal/plugins`.
+plugin and place it in `$XDG_CONFIG_HOME/conceal/plugins` or install it with
+`conceal provider install <path>`.
 
-List available providers:
+List installed providers:
 
 ```bash
 conceal provider

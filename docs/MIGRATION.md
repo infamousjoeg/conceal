@@ -7,7 +7,10 @@ A plugin is a standalone executable named `conceal-migrate-<provider>` placed in
 
 ## Quickstart
 
-1. Build or download a plugin and move it into the plugin directory.
+1. Build or download a plugin and install it:
+   ```bash
+   conceal provider install ./conceal-migrate-aws-secretsmanager
+   ```
 2. Verify it is detected:
    ```bash
    conceal provider
