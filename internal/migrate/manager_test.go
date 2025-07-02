@@ -3,6 +3,8 @@ package migrate
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -25,5 +27,36 @@ func TestRateLimit(t *testing.T) {
 	}
 	if time.Since(start) < 500*time.Millisecond {
 		t.Fatalf("no rate limiting")
+	}
+}
+
+func TestInstallAndList(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	mgr := NewManager()
+
+	pluginFile := filepath.Join(dir, "plug")
+	if err := os.WriteFile(pluginFile, []byte("test"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.Install(pluginFile); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	names, err := mgr.List()
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	want := "conceal-migrate-plug"
+	if len(names) != 1 || names[0] != want {
+		t.Fatalf("unexpected names %v", names)
+	}
+
+	info, err := os.Stat(filepath.Join(mgr.Dir, want))
+	if err != nil {
+		t.Fatalf("stat installed: %v", err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Fatalf("wrong perm %v", info.Mode().Perm())
 	}
 }

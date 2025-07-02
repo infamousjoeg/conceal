@@ -59,8 +59,15 @@ func (m *Manager) Install(src string) error {
 	if err != nil {
 		return err
 	}
-	dst := filepath.Join(m.Dir, filepath.Base(src))
+	name := filepath.Base(src)
+	if !strings.HasPrefix(name, "conceal-migrate-") {
+		name = "conceal-migrate-" + name
+	}
+	dst := filepath.Join(m.Dir, name)
 	if err := os.WriteFile(dst, in, 0o755); err != nil {
+		return err
+	}
+	if err := os.Chmod(dst, 0o755); err != nil {
 		return err
 	}
 	return nil
