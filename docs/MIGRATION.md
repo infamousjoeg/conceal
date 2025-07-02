@@ -1,9 +1,8 @@
 # Secret Migration
 
-Conceal can copy secrets from your local keyring to external providers using
-plugins.
-A plugin is a standalone executable named `conceal-migrate-<provider>` placed in
-`$XDG_CONFIG_HOME/conceal/plugins`.
+Conceal can export your local secrets into external vaults using small plugin
+executables. Each plugin follows a common interface so you can write your own or
+use one provided by the community.
 
 ## Quickstart
 
@@ -11,11 +10,11 @@ A plugin is a standalone executable named `conceal-migrate-<provider>` placed in
    ```bash
    conceal provider install ./conceal-migrate-aws-secretsmanager
    ```
-2. Verify it is detected:
+2. List available providers:
    ```bash
    conceal provider
    ```
-3. Configure the provider (runs once and stores credentials securely):
+3. Configure the provider (only once):
    ```bash
    conceal configure aws-secretsmanager
    ```
@@ -23,11 +22,15 @@ A plugin is a standalone executable named `conceal-migrate-<provider>` placed in
    ```bash
    conceal migrate --to aws-secretsmanager
    ```
-   Use `--dry-run` to preview and `--selector` to copy only matching keys.
+   Add `--dry-run` to preview changes or `--selector` to choose specific keys.
 
-## Writing plugins
+## Writing Plugins
 
-Plugins implement the following interface:
+A plugin is a simple Go program that implements the `Migrator` interface. Start
+by copying `plugins/template` and filling in the `Put` method. Build your binary
+and place it in `$XDG_CONFIG_HOME/conceal/plugins`.
+
+The interface:
 
 ```go
 type Migrator interface {
@@ -38,7 +41,4 @@ type Migrator interface {
 }
 ```
 
-Copy `plugins/template` as a starting point or study
-`plugins/aws-secretsmanager` for a production-ready example. After building your
-plugin, place the binary into the plugin directory and run `conceal provider`
-again to confirm it loads.
+See `plugins/aws-secretsmanager` for a complete example.

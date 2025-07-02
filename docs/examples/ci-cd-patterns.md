@@ -1,7 +1,10 @@
 # CI/CD Patterns
 
-Use conceal to inject secrets into build jobs:
-```yaml
-- name: Fetch secret
-  run: echo "DB_PASS=$(conceal get db/password --stdout)" >> $GITHUB_ENV
+Use Conceal in your pipeline to retrieve secrets at runtime.
+
+```bash
+export SUMMON_PROVIDER=conceal
+conceal get db/password --stdout | deploy-script
 ```
+
+For Docker builds, copy the binary into your image and call it during setup.

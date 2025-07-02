@@ -5,14 +5,16 @@ This plugin uploads secrets from Conceal to AWS Secrets Manager.
 ## Build
 
 ```bash
+cd plugins/aws-secretsmanager
 go build -o conceal-migrate-aws-secretsmanager .
 ```
 
-Place the resulting binary in your Conceal plugin directory (usually `$XDG_CONFIG_HOME/conceal/plugins`).
+Copy the binary to your Conceal plugin directory (usually
+`$XDG_CONFIG_HOME/conceal/plugins`).
 
 ## Usage
 
-Configure the plugin once:
+Configure once:
 
 ```bash
 conceal configure aws-secretsmanager

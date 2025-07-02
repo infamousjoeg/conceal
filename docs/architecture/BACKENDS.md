@@ -1,9 +1,9 @@
 # Secret Store Backends
 
 ## macOS Keychain
-The macOS backend uses the `go-keychain` library. Items are stored as generic
-passwords scoped to the user. Each secret's label is the secret ID used by
-Conceal.
+
+Uses the `go-keychain` library. Items are stored as generic passwords and scoped
+to the user.
 
 ```go
 item := keychain.NewItem()
@@ -12,23 +12,23 @@ item.SetService("conceal")
 item.SetAccount(secretID)
 item.SetLabel(secretID)
 item.SetData(secret)
-err := keychain.AddItem(item)
+keychain.AddItem(item)
 ```
 
 ## Windows Credential Manager
-The Windows backend relies on the `wincred` library to interact with Credential
-Manager. Secrets are stored as generic credentials.
+
+Relies on the `wincred` library to store generic credentials.
 
 ```go
 cred := wincred.NewGenericCredential(secretID)
 cred.CredentialBlob = secret
-cred.Comment = "summon"
 cred.Write()
 ```
 
 ## Linux libsecret
-Linux support uses `go-libsecret` which communicates with a D-Bus secret
-service such as `gnome-keyring`.
+
+Uses `go-libsecret` over D-Bus. A secret service like `gnome-keyring` must be
+running.
 
 ```go
 svc, _ := libsecret.NewService()
@@ -37,6 +37,3 @@ col := svc.Collections()[0]
 sec := libsecret.NewSecret(session, nil, secret, "text/plain")
 col.CreateItem(secretID, sec, false)
 ```
-
-If no secret service is available, errors are wrapped with hints so the user can
-start `gnome-keyring` or an alternative service.

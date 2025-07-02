@@ -1,21 +1,19 @@
 # Architecture Overview
 
-Conceal uses a thin abstraction layer over each operating system's credential
-store. The CLI commands call into the `keychain` package which provides
-implementations for macOS (Keychain), Windows (Credential Manager), and Linux
-(libsecret).
+Conceal is a thin CLI wrapper around each operating system's credential store. A
+single `keychain` package provides the same functions on macOS, Windows and
+Linux.
 
 ```
 +---------+      +------------+
-|   CLI   +----->+  keychain  |
+|  CLI    +----->+  keychain  |
 +---------+      +------------+
-                     | platform implementations
+                      | platform implementations
 ```
 
-Each backend exposes the same functions: `AddSecret`, `GetSecret`,
-`UpdateSecret`, `DeleteSecret`, `ListSecrets`, and `SecretExists`. Unsupported
-platforms are handled by `keychain_other.go` which returns informative errors.
+Backends expose `AddSecret`, `GetSecret`, `UpdateSecret`, `DeleteSecret`,
+`ListSecrets` and `SecretExists`. If a platform is unsupported the functions
+return an informative error.
 
-Secrets are stored using the OS facilities which handle encryption at rest.
-Errors from D-Bus or libsecret on Linux are wrapped to guide the user to install
-a compatible secret service.
+Secrets are encrypted at rest by the OS. On Linux we use `libsecret` over D-Bus
+which requires a running keyring service like `gnome-keyring`.

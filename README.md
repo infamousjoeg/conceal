@@ -1,102 +1,64 @@
 # Conceal
 
-Conceal is a small command line tool that saves secrets like passwords or API keys in your operating system's secret store. It works on macOS, Windows and Linux.
+![Build](https://github.com/infamousjoeg/conceal/actions/workflows/go-test.yml/badge.svg)
+![License](https://img.shields.io/github/license/infamousjoeg/conceal)
+![Go Report](https://goreportcard.com/badge/github.com/infamousjoeg/conceal)
 
-Secrets are stored in:
+**Conceal** is a friendly CLI that stores secrets in your operating system's own
+credential manager. It works on macOS Keychain, Windows Credential Manager and
+Linux keyrings such as `gnome-keyring`. Secrets never touch disk and can be used
+with [Summon](https://cyberark.github.io/summon) and other tools.
 
-- **macOS** – the Keychain
-- **Windows** – Credential Manager
-- **Linux** – the keyring provided by `libsecret` (for example `gnome-keyring`)
-
-On Linux you may need to install and run a secret service such as `gnome-keyring` before using Conceal.
-
-## Installation
-
-### Homebrew (macOS)
+## Quickstart
 
 ```bash
-brew tap infamousjoeg/tap
-brew install conceal
+# install from source
+go install github.com/infamousjoeg/conceal@latest
+
+# add a secret
+echo "hunter2" | conceal set demo/password
+
+# retrieve the value
+conceal get demo/password --stdout
 ```
 
-### Manual download
+See the [installation guide](docs/user-guide/INSTALLATION.md) for packages and
+binary downloads.
 
-1. Download the latest release from the [GitHub releases page](https://github.com/infamousjoeg/conceal/releases).
-2. Place the `conceal` executable somewhere in your `PATH` (for example `~/bin`).
+## Features
 
-## Basic usage
+- Secure secret storage using the OS keychain
+- Simple commands for set, get, update and list
+- Piping support via `--stdout`
+- Plugin system for migrating secrets to other providers
+- Summon integration for applications
 
-Set a secret:
+## Plugins
+
+Plugins extend `conceal migrate` and live in
+`$XDG_CONFIG_HOME/conceal/plugins`. Build the sample AWS plugin with:
 
 ```bash
-conceal set my/secret
-# or provide the value via a pipe
-echo "value" | conceal set my/secret
+cd plugins/aws-secretsmanager
+go build -o conceal-migrate-aws-secretsmanager .
 ```
 
-Update a secret:
+Move the binary to the plugin directory then run `conceal provider` to list it.
+Full details are in [docs/MIGRATION.md](docs/MIGRATION.md).
 
-```bash
-echo "new" | conceal update my/secret
-```
+## Documentation
 
-Retrieve a secret:
+- [User Guide](docs/user-guide/INSTALLATION.md)
+- [Developer Guide](docs/developer-guide/CONTRIBUTING.md)
+- [Architecture](docs/architecture/DESIGN.md)
+- [Examples](docs/examples/basic-usage.md)
 
-```bash
-conceal get my/secret            # copy to clipboard for 15 seconds
-conceal get my/secret --stdout   # print the value so it can be piped
-```
+## Contributing
 
-List all stored secrets:
+We welcome pull requests! Please read the
+[contributing guide](docs/developer-guide/CONTRIBUTING.md) and run the tests with
+`go test ./...` before submitting.
 
-```bash
-conceal list
-```
-
-Remove a secret:
-
-```bash
-conceal unset my/secret
-```
-
-Use Conceal as a [Summon](https://cyberark.github.io/summon) provider:
-
-```bash
-conceal summon install
-```
-
-## Secret migration
-
-Conceal can push secrets to other vaults through plugins. Download or build a
-plugin and place it in `$XDG_CONFIG_HOME/conceal/plugins` or install it with
-`conceal provider install <path>`.
-
-List installed providers:
-
-```bash
-conceal provider
-```
-
-Configure one the first time:
-
-```bash
-conceal configure aws-secretsmanager
-```
-
-Migrate everything (use `--dry-run` to preview):
-
-```bash
-conceal migrate --to aws-secretsmanager
-```
-
-See [docs/MIGRATION.md](docs/MIGRATION.md) for plugin development details.
-
-## Managing the secret store
-
-Conceal uses your operating system's built in store. Normally there is nothing else you need to do. On Linux you may need to install `libsecret` and run a secret service like `gnome-keyring`. Conceal will report an error if it cannot reach the secret service.
-
-## More information
-
-For development guidelines see the [docs directory](docs/). Bugs and pull requests are welcome!
+## License
 
 Conceal is released under the [Apache 2.0](LICENSE) license.

@@ -1,6 +1,9 @@
-# Scripting Example
+# Scripting
+
+Conceal plays nicely with shell scripts. Use the `--stdout` flag to pass secrets
+into other commands.
 
 ```bash
-secret=$(conceal get service/token --stdout)
-curl -H "Authorization: Bearer $secret" https://example.com
+secret=$(conceal get api/key --stdout)
+curl -H "Authorization: $secret" https://example.com
 ```
