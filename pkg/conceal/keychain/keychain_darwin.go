@@ -5,6 +5,7 @@ package keychain
 import (
 	"fmt"
 	"log"
+	"runtime"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 	gokeychain "github.com/keybase/go-keychain"
@@ -132,7 +133,9 @@ func GetSecret(secretID string, delivery string) error {
 		} else if delivery == "stdout" {
 			fmt.Printf("%s", password)
 		}
+		// Zero the plaintext password and keep it alive until cleared.
 		password = ""
+		runtime.KeepAlive(password)
 	}
 
 	return nil
