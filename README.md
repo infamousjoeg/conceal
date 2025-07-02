@@ -62,3 +62,7 @@ We welcome pull requests! Please read the
 ## License
 
 Conceal is released under the [Apache 2.0](LICENSE) license.
+
+## Community
+
+This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
