@@ -11,19 +11,16 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "conceal",
 	Short: "Conceal is a command-line utility that eases the interaction between developer and the OS credential store.",
-	Long: `Conceal is a command-line utility that eases the interaction between
-developer and the OS credential store, such as macOS Keychain, Windows Credential Manager, or the Linux keyring. It is the open-source companion to Summon
-as every secret added using this tool is stored using
-Summon-compliant formatting.
-	
-	Example Usages:
-	$ conceal set app/secret
-	$ conceal unset app/secret
-	$ conceal update app/secret
-	$ conceal get app/secret
-	$ conceal list
-	$ conceal summon install
-	$ conceal summon show app/secret`,
+	Long: `Conceal is a command-line utility that eases the interaction between developer and the OS credential store, such as macOS Keychain, Windows Credential Manager, or the Linux keyring. It is the open-source companion to Summon as every secret added using this tool is stored using Summon-compliant formatting.
+
+Example Usages:
+  $ conceal set app/secret
+  $ conceal unset app/secret
+  $ conceal update app/secret
+  $ conceal get app/secret
+  $ conceal list
+  $ conceal summon install
+  $ conceal summon show app/secret`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
