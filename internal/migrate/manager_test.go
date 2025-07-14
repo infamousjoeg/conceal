@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -56,7 +57,7 @@ func TestInstallAndList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat installed: %v", err)
 	}
-	if info.Mode().Perm() != 0o755 {
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o755 {
 		t.Fatalf("wrong perm %v", info.Mode().Perm())
 	}
 }
