@@ -1,20 +1,231 @@
-# Contributing
+# Contributing to Conceal
 
-When contributing to this repository, please first discuss the change you wish to make via issue,
-email, or any other method with the owners of this repository before making a change. 
+Thank you for your interest in contributing to Conceal! This document provides guidelines for contributing to our cross-platform secret management tool.
 
-Please note we have a code of conduct, please follow it in all your interactions with the project.
+## Table of Contents
+- [Getting Started](#getting-started)
+- [Development Environment](#development-environment)
+- [Cross-Platform Development](#cross-platform-development)
+- [Testing](#testing)
+- [Pull Request Process](#pull-request-process)
+- [Code Style](#code-style)
+- [Code of Conduct](#code-of-conduct)
+
+## Getting Started
+
+When contributing to this repository, please first discuss the change you wish to make via issue, email, or any other method with the maintainers before making a change.
+
+### Prerequisites
+
+- **Go**: Version 1.21 or later
+- **Git**: For version control
+- **Platform Access**: 
+  - macOS with Xcode Command Line Tools (for Keychain testing)
+  - Windows 10+ (for Credential Manager testing)
+
+## Development Environment
+
+### Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/infamousjoeg/conceal.git
+   cd conceal
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   go mod download
+   ```
+
+3. **Build for your platform**:
+   ```bash
+   go build .
+   ```
+
+4. **Run tests**:
+   ```bash
+   go test -v ./...
+   ```
+
+## Cross-Platform Development
+
+Conceal supports multiple platforms with platform-specific implementations:
+
+### Supported Platforms
+- **macOS**: Full support via Keychain Access
+- **Windows**: Full support via Credential Manager
+- **Linux**: Not currently supported
+
+### Build Tags
+
+We use Go build tags to separate platform-specific code:
+
+```go
+//go:build windows
+// +build windows
+
+//go:build darwin  
+// +build darwin
+
+//go:build !darwin && !windows
+// +build !darwin,!windows
+```
+
+### Testing Cross-Platform Code
+
+#### Local Testing
+```bash
+# Test current platform
+go test ./...
+
+# Cross-compile (build only, won't run)
+GOOS=windows GOARCH=amd64 go build .
+GOOS=darwin GOARCH=amd64 go build .
+```
+
+#### CI/CD Testing
+Our GitHub Actions automatically test on:
+- Ubuntu (latest)
+- Windows (latest)  
+- macOS (latest)
+
+### Adding New Platform Support
+
+1. **Create platform-specific files**:
+   ```
+   pkg/conceal/keychain/keychain_newplatform.go
+   ```
+
+2. **Implement the interface**:
+   ```go
+   func SecretExists(secretID string) bool
+   func ListSecrets() []QueryResult
+   func AddSecret(secretID string, secret []byte) error
+   func DeleteSecret(secretID string) error
+   func GetSecret(secretID string, delivery string) error
+   func UpdateSecret(secretID string, secret []byte) error
+   ```
+
+3. **Add build tags**:
+   ```go
+   //go:build newplatform
+   // +build newplatform
+   ```
+
+4. **Update documentation** and platform support matrix
+
+## Testing
+
+### Running Tests
+
+```bash
+# All tests
+go test -v ./...
+
+# With race detection
+go test -race ./...
+
+# With coverage
+go test -coverprofile=coverage.out ./...
+```
+
+### Platform-Specific Testing
+
+**macOS Testing:**
+- Tests use actual Keychain Access APIs
+- Requires user permission for keychain access
+- Cannot fully automate in CI (requires user interaction)
+
+**Windows Testing:**
+- Tests use actual Credential Manager APIs  
+- Requires Windows environment
+- Cannot fully automate in CI (requires user interaction)
+
+**Cross-Platform Testing:**
+- Interface compatibility tests run on all platforms
+- Build verification tests ensure compilation succeeds
+
+### Adding Tests
+
+1. **Unit tests**: Test individual functions
+2. **Integration tests**: Test credential store interactions
+3. **Platform compatibility tests**: Verify interfaces work across platforms
 
 ## Pull Request Process
 
-1. Ensure any install or build dependencies are removed before the end of the layer when doing a 
-   build.
-2. Update the README.md with details of changes to the interface, this includes new environment 
-   variables, exposed ports, useful file locations and container parameters.
-3. Increase the version number in [version.go]() to the new version that this
-   Pull Request would represent. The versioning scheme we use is [SemVer](http://semver.org/).
-4. You may merge the Pull Request in once you have the sign-off of the maintainer OR two other developers, or if you 
-   do not have permission to do that, you may request the second reviewer to merge it for you.
+### Before Submitting
+
+1. **Run all tests**:
+   ```bash
+   go test ./...
+   go test -race ./...
+   ```
+
+2. **Run linting**:
+   ```bash
+   golangci-lint run
+   ```
+
+3. **Format code**:
+   ```bash
+   go fmt ./...
+   ```
+
+4. **Check go.mod**:
+   ```bash
+   go mod tidy
+   ```
+
+### PR Requirements
+
+1. **Code Quality**: 
+   - All tests pass
+   - Linting passes
+   - Code is formatted with `go fmt`
+   - `go mod tidy` has been run
+
+2. **Documentation**:
+   - Update README.md if adding new features
+   - Add/update function documentation
+   - Update platform support matrix if needed
+
+3. **Version**: 
+   - Bump version in `pkg/conceal/version.go` following [SemVer](http://semver.org/)
+   - Major: Breaking changes
+   - Minor: New features (like new platform support)
+   - Patch: Bug fixes
+
+4. **Cross-Platform**: 
+   - Ensure changes work on all supported platforms
+   - Add appropriate build tags
+   - Test compilation on all platforms
+
+### Review Process
+
+1. **Automated Checks**: All CI/CD checks must pass
+2. **Code Review**: Maintainer review required
+3. **Testing**: Platform-specific testing as applicable
+4. **Merge**: Squash and merge preferred
+
+## Code Style
+
+### Go Guidelines
+- Follow [Effective Go](https://golang.org/doc/effective_go.html)
+- Use `go fmt` for formatting
+- Follow [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+
+### Platform-Specific Code
+- Use build tags consistently
+- Maintain consistent interfaces across platforms
+- Handle platform differences gracefully
+- Provide meaningful error messages for unsupported platforms
+
+### Security
+- Never log secrets or sensitive data
+- Use secure random generation when needed
+- Follow platform security best practices
+- Validate all inputs
 
 ## Code of Conduct
 

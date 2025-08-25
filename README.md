@@ -1,14 +1,16 @@
 # Conceal <!-- omit in toc -->
 
-Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access. It is the open-source companion to [Summon](https://cyberark.github.io/summon) as every secret added using this tool into Keychain is added using Summon-compliant formatting. If you don't plan on using Summon, it's still a great Keychain management tool.
+Conceal is a cross-platform command-line utility that eases the interaction between developers and native OS credential stores. It securely manages secrets using **macOS Keychain** and **Windows Credential Manager**. Conceal is the open-source companion to [Summon](https://cyberark.github.io/summon), storing all secrets in Summon-compliant formatting for seamless integration.
 
-[![](https://github.com/infamousjoeg/conceal/workflows/Go/badge.svg?branch=master)](https://github.com/infamousjoeg/conceal/actions?query=workflow%3AGo) [![](https://img.shields.io/github/downloads/infamousjoeg/conceal/latest/total?color=blue&label=Download%20Latest%20Release&logo=github)](https://github.com/infamousjoeg/conceal/releases/latest)
+[![Go Test](https://github.com/infamousjoeg/conceal/workflows/Go%20Test/badge.svg)](https://github.com/infamousjoeg/conceal/actions/workflows/go-test.yml) [![Code Quality](https://github.com/infamousjoeg/conceal/workflows/Code%20Quality/badge.svg)](https://github.com/infamousjoeg/conceal/actions/workflows/golangci-lint.yml) [![Security](https://github.com/infamousjoeg/conceal/workflows/Security%20Checks/badge.svg)](https://github.com/infamousjoeg/conceal/actions/workflows/security.yml) [![](https://img.shields.io/github/downloads/infamousjoeg/conceal/latest/total?color=blue&label=Download%20Latest%20Release&logo=github)](https://github.com/infamousjoeg/conceal/releases/latest)
 
 ## Table of Contents <!-- omit in toc -->
+- [Supported Platforms](#supported-platforms)
 - [Requirements](#requirements)
 - [Installation](#installation)
-  - [Homebrew (MacOS)](#homebrew-macos)
-  - [Manual](#manual)
+  - [Homebrew (macOS)](#homebrew-macos)
+  - [Windows](#windows)
+  - [Manual Installation](#manual-installation)
 - [Usage](#usage)
   - [Add a secret](#add-a-secret)
   - [Update a secret](#update-a-secret)
@@ -41,29 +43,66 @@ Conceal is a command-line utility that eases the interaction between developer a
   - [Key Features of Conceal](#key-features-of-conceal)
   - [How to Get Started with Conceal](#how-to-get-started-with-conceal)
   - [Conclusion](#conclusion)
+- [Cross-Platform Development](#cross-platform-development)
 - [Maintainer](#maintainer)
 - [Contributions](#contributions)
 - [License](#license)
 
+## Supported Platforms
+
+| Platform | Secret Store | Status | Notes |
+|----------|--------------|---------|-------|
+| 🍎 **macOS** | Keychain Access | ✅ Full Support | Native integration via Security Framework |
+| 🪟 **Windows** | Credential Manager | ✅ Full Support | Native integration via Windows API |
+| 🐧 **Linux** | - | ❌ Not Supported | Future consideration for keyring/libsecret |
+
 ## Requirements
 
-* MacOS
+### macOS
+* macOS 10.12 (Sierra) or later
+* Xcode Command Line Tools (for Keychain access)
+
+### Windows  
+* Windows 10 or later
+* Windows Server 2016 or later
 
 ## Installation
 
-### Homebrew (MacOS)
+### Homebrew (macOS)
 
-```shell
+```bash
 brew tap infamousjoeg/tap
 brew install conceal
 ```
 
-### Manual
+### Windows
 
-1. Download the latest release available at [GitHub Releases](https://github.com/infamousjoeg/conceal/releases).
-2. Move the `conceal` executable file to a directory in your `PATH`. (I use `~/bin`.)
-3. In Terminal, run the following command to make sure it's in your `PATH`: \
-   `$ conceal`
+#### Via GitHub Releases
+1. Download `conceal_Windows_x86_64.zip` from [GitHub Releases](https://github.com/infamousjoeg/conceal/releases/latest)
+2. Extract `conceal.exe` to a folder in your PATH (e.g., `C:\Program Files\Conceal\`)
+3. Open Command Prompt or PowerShell and verify: `conceal version`
+
+#### Via PowerShell (Future)
+```powershell
+# Chocolatey package coming soon
+# choco install conceal
+```
+
+### Manual Installation
+
+#### All Platforms
+1. Download the appropriate binary for your platform from [GitHub Releases](https://github.com/infamousjoeg/conceal/releases/latest):
+   - **macOS**: `conceal_Darwin_x86_64.tar.gz` (Intel) or `conceal_Darwin_arm64.tar.gz` (Apple Silicon)
+   - **Windows**: `conceal_Windows_x86_64.zip` 
+2. Extract and move the executable to a directory in your `PATH`
+3. Verify installation: `conceal version`
+
+#### Build from Source
+```bash
+git clone https://github.com/infamousjoeg/conceal.git
+cd conceal
+go build -o conceal .
+```
 
 ## Usage
 
@@ -72,26 +111,30 @@ brew install conceal
 `$ conceal set dockerhub/token`
 `$ echo "my-secret-value" | conceal set dockerhub/token`
 
-To add a secret to Keychain, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
+To add a secret to your OS credential store, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
+
+**Platform-specific behavior:**
+- **macOS**: Stores in Keychain Access with service "summon"
+- **Windows**: Stores in Credential Manager under "Generic Credentials" with target "summon/{secret_name}"
 
 ### Update a secret
 
 `$ conceal update dockerhub/token`
 `$ echo "my-new-secret-value" | conceal update dockerhub/token`
 
-To update a secret in Keychain, call `conceal` and use the `update` command to pass the account name to update. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
+To update an existing secret in your OS credential store, call `conceal` and use the `update` command to pass the account name to update. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
 
 ### Get a secret value
 
 `$ conceal get dockerhub/token`
 
-To retrieve a secret from Keychain, call `conceal` and use the `get` command to pass the account name to retrieve from. The secret value will be added to your clipboard for 15 seconds.
+To retrieve a secret from your OS credential store, call `conceal` and use the `get` command to pass the account name to retrieve from. The secret value will be added to your clipboard for 15 seconds and automatically cleared for security.
 
 ### List Summon secrets
 
 `$ conceal list`
 
-To list all secrets associated with Summon in Keychain, call `conceal` and use the `list` command to list all accounts present.
+To list all secrets associated with Summon in your OS credential store, call `conceal` and use the `list` command to list all accounts present.
 
 To filter the list further, pipe to `grep` like this `$ conceal list | grep dockerhub/`.
 
@@ -131,83 +174,153 @@ To display the help message for a specific command, just call `conceal help` and
 
 To display the current version, call `conceal` with the `version` command.
 
-## keychain Package
+## Go Package Documentation
+
+### keychain Package (Cross-Platform)
 
 ```go
 import "github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 ```
 
-### Usage
+The keychain package provides a unified interface for interacting with native OS credential stores across platforms.
 
-#### func  AddSecret
+#### Platform Support
+- **macOS**: Uses Security Framework and Keychain Access
+- **Windows**: Uses Windows Credential Manager API
+- **Other platforms**: Returns appropriate error messages
 
-```go
-func AddSecret(secretID string, secret []byte)
-```
-AddSecret is a non-return function that adds the secret and secret value to
-keychain.
+#### Functions
 
-#### func  DeleteSecret
-
-```go
-func DeleteSecret(secretID string)
-```
-DeleteSecret is a non-return function that removes the secret from keychain.
-
-#### func  ListSecrets
+##### func AddSecret
 
 ```go
-func ListSecrets() []string
+func AddSecret(secretID string, secret []byte) error
 ```
-ListSecrets is a string array function that returns all secrets in keychain with
-the label `summon`.
+AddSecret stores a secret in the platform's native credential store. Returns an error if the secret already exists or if the operation fails.
 
-#### func  SecretExists
+**Platform behavior:**
+- **macOS**: Stores in Keychain with service "summon"
+- **Windows**: Stores in Credential Manager with target "summon/{secretID}"
+
+##### func DeleteSecret
+
+```go
+func DeleteSecret(secretID string) error
+```
+DeleteSecret removes a secret from the platform's credential store. Returns an error if the secret doesn't exist or removal fails.
+
+##### func GetSecret
+
+```go
+func GetSecret(secretID string, delivery string) error
+```
+GetSecret retrieves a secret and delivers it via the specified method:
+- `"clipboard"`: Copies to clipboard for 15 seconds with auto-clear
+- `"stdout"`: Prints to standard output (for Summon integration)
+
+##### func ListSecrets
+
+```go
+func ListSecrets() []QueryResult
+```
+ListSecrets returns all Summon-compatible secrets from the credential store.
+
+```go
+type QueryResult struct {
+    Account string  // The secret identifier
+}
+```
+
+##### func SecretExists
 
 ```go
 func SecretExists(secretID string) bool
 ```
-SecretExists is a boolean function to verify a secret is present in keychain.
+SecretExists checks if a secret exists in the credential store without retrieving its value.
 
-#### func  UpdateSecret
-
-```go
-func UpdateSecret(secretID string, secret []byte)
-```
-UpdateSecret is a non-return function that updates the secret value in keychain.
-
-#### func  GetSecret
+##### func UpdateSecret
 
 ```go
-func GetSecret(secretID string, delivery string)
+func UpdateSecret(secretID string, secret []byte) error
 ```
-GetSecret is a non-return function that retrieves the secret value from keychain and delivers it in the declared method. If `delivery` is set to `clipboard`, the secret value is copied to the clipboard. If a signal interrupt is detected, the content is immediately cleared. If `delivery` is set to `stdout`, the secret value is printed to the terminal.
+UpdateSecret modifies an existing secret's value. Returns an error if the secret doesn't exist.
 
-## clipboard Package
+### clipboard Package
 
 ```go
 import "github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 ```
 
-### Usage
+The clipboard package provides secure clipboard management with automatic clearing.
 
-#### func  Secret
+#### Functions
+
+##### func Secret
 
 ```go
 func Secret(secret string)
 ```
-Secret is a non-return function that adds content to the host clipboard that
-persists for 15 seconds. If a signal interrupt is detected, the content is
-immediately cleared.
+Secret copies the provided string to the system clipboard and automatically clears it after 15 seconds. If a signal interrupt (Ctrl+C) is detected, the clipboard is immediately cleared for security.
 
-#### func  SetupCloseHandler
+**Cross-platform support:**
+- **macOS**: Uses `pbcopy` and `pbpaste` via atotto/clipboard
+- **Windows**: Uses Windows Clipboard API via atotto/clipboard
+- **Linux**: Uses xclip/xsel via atotto/clipboard
+
+##### func SetupCloseHandler
 
 ```go
 func SetupCloseHandler()
 ```
-SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
-program if it receives an interrupt from the OS. We then handle this by calling
-our clean up procedure and exiting the program.
+SetupCloseHandler creates a signal handler that listens for OS interrupts (SIGTERM, SIGINT) and immediately clears the clipboard when received. This ensures secrets are not left in the clipboard if the application is terminated unexpectedly.
+
+### wincred Package (Windows-Specific)
+
+```go
+import "github.com/infamousjoeg/conceal/pkg/conceal/wincred"
+```
+
+The wincred package provides Windows-specific credential management functionality. This package is only available on Windows builds.
+
+#### Functions
+
+##### func SecretExists
+
+```go
+func SecretExists(secretID string) bool
+```
+
+##### func ListSecrets  
+
+```go
+func ListSecrets() ([]SecretInfo, error)
+```
+
+##### func AddSecret
+
+```go
+func AddSecret(secretID string, secret []byte) error
+```
+
+##### func DeleteSecret
+
+```go  
+func DeleteSecret(secretID string) error
+```
+
+##### func GetSecret
+
+```go
+func GetSecret(secretID string, delivery string) ([]byte, error)
+```
+
+##### func UpdateSecret
+
+```go
+func UpdateSecret(secretID string, secret []byte) error
+```
+
+**Note**: This package uses build tags and is only compiled on Windows systems. It provides the underlying implementation for Windows Credential Manager integration.
 
 ## Concept
 
@@ -216,8 +329,8 @@ our clean up procedure and exiting the program.
 In modern software development, securely managing secrets (such as API keys, passwords, and other sensitive data) is crucial. Conceal, developed by Joe Garcia, is a powerful utility designed to simplify and secure the management of these secrets. Here’s why you should consider using Conceal:
 
 #### **Leverage Existing Tools**
-**"Why not use what Steve and Bill gave us?"**
-- Conceal allows developers to use built-in tools and environments (like macOS Keychain) to manage secrets without needing to commit any code or set up a dedicated secrets manager initially. This means you can start development immediately without additional setup overhead.
+**"Why not use what the OS provides?"**
+- Conceal allows developers to use built-in OS credential stores (macOS Keychain and Windows Credential Manager) to manage secrets without needing to set up dedicated secrets management infrastructure initially. This means you can start development immediately without additional setup overhead or cloud dependencies.
 
 #### **Seamless Integration with Summon**
 - Conceal works seamlessly with Summon, a tool that injects secrets as environment variables into your applications. This allows for easy transitioning between different environments without changing the code. As you move from development to staging to production, the secrets provider can change without any code modification, enhancing flexibility and security.
@@ -236,9 +349,12 @@ In modern software development, securely managing secrets (such as API keys, pas
 
 ### Key Features of Conceal
 
-1. **Local Development-Friendly**: Ideal for local development environments where access to a full secrets management system might not be available.
-2. **Ease of Use**: Simple commands to set and retrieve secrets, integrated smoothly with the development workflow.
-3. **Security**: Ensures that secrets are not hardcoded, reducing the risk of accidental exposure.
+1. **Cross-Platform**: Native support for macOS Keychain and Windows Credential Manager
+2. **Local Development-Friendly**: Ideal for local development environments without cloud dependencies
+3. **Ease of Use**: Simple, consistent CLI commands across all supported platforms
+4. **Security**: Leverages OS-native encryption and access controls
+5. **Summon Integration**: Seamless compatibility with CyberArk Summon for environment injection
+6. **Zero Configuration**: Works immediately after installation with no setup required
 
 ### How to Get Started with Conceal
 
@@ -251,6 +367,48 @@ In modern software development, securely managing secrets (such as API keys, pas
 Conceal is a powerful and useful utility for any developer looking to securely manage secrets without incurring additional setup costs or creating technical debt. By integrating with existing tools and promoting secure practices from the start, Conceal ensures your development process remains efficient, secure, and cost-effective. Choose Conceal to simplify your secret management and focus on building great software.
 
 For more information and to get started, visit the [Conceal GitHub page](https://github.com/infamousjoeg/conceal).
+
+## Cross-Platform Development
+
+Conceal is built with Go and uses platform-specific build tags to provide native integration with each operating system's credential store.
+
+### Architecture
+
+```
+pkg/conceal/
+├── keychain/
+│   ├── keychain_darwin.go     # macOS implementation
+│   ├── keychain_windows.go    # Windows implementation  
+│   └── keychain_other.go      # Unsupported platforms
+└── wincred/
+    ├── wincred_windows.go     # Windows Credential Manager API
+    └── wincred_other.go       # Non-Windows stub
+```
+
+### Building for Different Platforms
+
+```bash
+# Build for current platform
+go build .
+
+# Cross-compile for Windows
+GOOS=windows GOARCH=amd64 go build -o conceal.exe .
+
+# Cross-compile for macOS  
+GOOS=darwin GOARCH=amd64 go build -o conceal-darwin .
+
+# Cross-compile for macOS Apple Silicon
+GOOS=darwin GOARCH=arm64 go build -o conceal-arm64 .
+```
+
+### Testing
+
+Our CI/CD pipeline automatically tests on multiple platforms:
+
+- **Unit Tests**: Run on Ubuntu, Windows, and macOS
+- **Integration Tests**: Platform-specific credential store testing
+- **Cross-Compilation**: Verify all target platforms build successfully
+- **Security Scans**: Automated vulnerability detection
 
 ## Maintainer
 
