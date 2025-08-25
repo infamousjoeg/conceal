@@ -3,6 +3,7 @@ package conceal
 import (
 	"fmt"
 	"log"
+	"runtime"
 )
 
 // PrintSuccess is a function that prints a success message to the console. The message is in green and includes a checkmark emoji.
@@ -41,4 +42,23 @@ func GetSecretName(args []string) string {
 		secretName = args[0]
 	}
 	return secretName
+}
+
+// CheckPlatformSupport validates that the current platform supports secret management
+func CheckPlatformSupport() {
+	platform := GetPlatform()
+	if !IsSupported() {
+		PrintError("Secret management is not supported on %s. Only macOS and Windows are currently supported.", platform)
+	}
+}
+
+// GetPlatform returns the current operating system platform
+func GetPlatform() string {
+	return runtime.GOOS
+}
+
+// IsSupported checks if the current platform supports secret management  
+func IsSupported() bool {
+	platform := GetPlatform()
+	return platform == "darwin" || platform == "windows"
 }
