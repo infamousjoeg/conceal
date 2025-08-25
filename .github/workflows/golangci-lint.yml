@@ -1,10 +1,10 @@
-name: golangci-lint
+name: Code Quality
+
 on:
   push:
-    branches:
-      - main
-      - v*
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main", "v*" ]
 
 permissions:
   contents: read
@@ -12,16 +12,69 @@ permissions:
   checks: write
 
 jobs:
-  golangci:
-    name: lint
-    runs-on: macos-latest
+  golangci-lint:
+    name: Lint
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: stable
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-lint-${{ hashFiles('**/go.sum') }}
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.58
+          version: latest
           only-new-issues: true
+          args: --timeout=10m
+
+  go-mod-tidy:
+    name: Check go mod tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          if ! git diff --exit-code go.mod go.sum; then
+            echo "Please run 'go mod tidy' and commit the changes"
+            exit 1
+          fi
+
+  gofmt:
+    name: Check gofmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Check gofmt
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Please run 'gofmt -s -w .' to format the code"
+            gofmt -s -l .
+            exit 1
+          fi
