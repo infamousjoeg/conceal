@@ -1,4 +1,4 @@
-# This workflow will build a golang project
+# This workflow will build a golang project and test cross-platform functionality
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
 name: Go Test
@@ -11,7 +11,84 @@ on:
 
 jobs:
 
-  build:
+  test-cross-platform:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        go-version: ['1.20', '1.21']
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Run Tests
+      run: go test -v ./...
+
+    - name: Build for Current Platform
+      run: go build -v .
+
+    - name: Test Version Command
+      shell: bash
+      run: |
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          ./conceal.exe version
+        else
+          ./conceal version
+        fi
+
+  cross-compilation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Cross Compile for Windows
+      run: |
+        GOOS=windows GOARCH=amd64 go build -o conceal-windows.exe .
+        ls -la conceal-windows.exe
+
+    - name: Cross Compile for macOS
+      run: |
+        GOOS=darwin GOARCH=amd64 go build -o conceal-darwin .
+        ls -la conceal-darwin
+
+    - name: Cross Compile for Linux
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o conceal-linux .
+        ls -la conceal-linux
+
+  windows-integration:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build Windows Binary
+      run: go build -o conceal.exe .
+
+    - name: Test Basic Commands (Windows)
+      shell: pwsh
+      run: |
+        ./conceal.exe version
+        ./conceal.exe help
+        # Note: Cannot test actual credential operations in CI without user interaction
+
+    - name: Verify Windows-specific Code Compilation
+      run: go build -tags windows ./pkg/conceal/wincred/...
+
+  macos-integration:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
@@ -19,7 +96,16 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: '1.21'
 
-    - name: Test
-      run: go test -v ./...
+    - name: Build macOS Binary
+      run: go build -o conceal .
+
+    - name: Test Basic Commands (macOS)
+      run: |
+        ./conceal version
+        ./conceal help
+        # Note: Cannot test actual keychain operations in CI without user interaction
+
+    - name: Verify macOS-specific Code Compilation  
+      run: go build -tags darwin ./pkg/conceal/keychain/...
