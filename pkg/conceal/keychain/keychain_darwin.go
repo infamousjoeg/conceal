@@ -48,7 +48,7 @@ func ListSecrets() []QueryResult {
 	}
 
 	// Convert to our cross-platform QueryResult format
-	var results []QueryResult
+	results := make([]QueryResult, 0, len(secretIDs))
 	for _, secret := range secretIDs {
 		results = append(results, QueryResult{
 			Account: secret.Account,

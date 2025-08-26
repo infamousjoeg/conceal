@@ -28,7 +28,7 @@ func ListSecrets() []QueryResult {
 	}
 
 	// Convert to QueryResult format for compatibility
-	var results []QueryResult
+	results := make([]QueryResult, 0, len(secrets))
 	for _, secret := range secrets {
 		results = append(results, QueryResult{
 			Account: secret.Account,
