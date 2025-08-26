@@ -10,6 +10,8 @@ Conceal is a cross-platform command-line utility that eases the interaction betw
 - [Installation](#installation)
   - [Homebrew (macOS)](#homebrew-macos)
   - [Windows](#windows)
+    - [Via Chocolatey (Recommended)](#via-chocolatey-recommended)
+    - [Via GitHub Releases](#via-github-releases)
   - [Manual Installation](#manual-installation)
 - [Usage](#usage)
   - [Add a secret](#add-a-secret)
@@ -77,16 +79,15 @@ brew install conceal
 
 ### Windows
 
+#### Via Chocolatey (Recommended)
+```powershell
+choco install conceal
+```
+
 #### Via GitHub Releases
 1. Download `conceal_Windows_x86_64.zip` from [GitHub Releases](https://github.com/infamousjoeg/conceal/releases/latest)
 2. Extract `conceal.exe` to a folder in your PATH (e.g., `C:\Program Files\Conceal\`)
 3. Open Command Prompt or PowerShell and verify: `conceal version`
-
-#### Via PowerShell (Future)
-```powershell
-# Chocolatey package coming soon
-# choco install conceal
-```
 
 ### Manual Installation
 

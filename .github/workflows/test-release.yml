@@ -1,0 +1,124 @@
+name: Test Release Configuration
+
+on:
+  pull_request:
+    paths:
+      - '.goreleaser.yml'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+
+    - name: Install GoReleaser
+      run: |
+        curl -sLO https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_Linux_x86_64.tar.gz
+        tar -xzf goreleaser_Linux_x86_64.tar.gz
+        sudo mv goreleaser /usr/local/bin/
+
+    - name: Test GoReleaser Configuration
+      run: |
+        # Test configuration validity
+        goreleaser check
+        
+        # Test snapshot build (without release)
+        goreleaser build --snapshot --clean
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Test Cross-Platform Builds
+      run: |
+        echo "Testing cross-platform compilation..."
+        
+        # Windows
+        GOOS=windows GOARCH=amd64 go build -o conceal.exe .
+        echo "✅ Windows AMD64 build successful"
+        
+        # macOS Intel
+        GOOS=darwin GOARCH=amd64 go build -o conceal-darwin-amd64 .
+        echo "✅ macOS Intel build successful"
+        
+        # macOS Apple Silicon  
+        GOOS=darwin GOARCH=arm64 go build -o conceal-darwin-arm64 .
+        echo "✅ macOS Apple Silicon build successful"
+        
+        # Linux
+        GOOS=linux GOARCH=amd64 go build -o conceal-linux .
+        echo "✅ Linux AMD64 build successful"
+        
+        echo "All cross-platform builds completed successfully!"
+
+  test-documentation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Test Documentation Links
+      run: |
+        echo "Testing documentation links and formatting..."
+        
+        # Check that key installation sections exist
+        if grep -q "Via Chocolatey (Recommended)" README.md; then
+          echo "✅ Chocolatey installation section found"
+        else
+          echo "❌ Chocolatey installation section missing"
+          exit 1
+        fi
+        
+        if grep -q "brew tap infamousjoeg/tap" README.md; then
+          echo "✅ Homebrew tap installation found"
+        else
+          echo "❌ Homebrew tap installation missing"  
+          exit 1
+        fi
+        
+        echo "Documentation validation completed!"
+
+  simulate-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+
+    - name: Install GoReleaser
+      run: |
+        curl -sLO https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_Linux_x86_64.tar.gz
+        tar -xzf goreleaser_Linux_x86_64.tar.gz
+        sudo mv goreleaser /usr/local/bin/
+
+    - name: Simulate Release Process
+      run: |
+        echo "Simulating release process without publishing..."
+        
+        # Create a fake tag for simulation
+        git tag v4.1.0-test-$(date +%s)
+        
+        # Run GoReleaser in snapshot mode (no publishing)
+        goreleaser release --snapshot --skip=publish --clean
+        
+        # List generated artifacts
+        echo "Generated release artifacts:"
+        find dist/ -type f -name "*" | head -20
+        
+        echo "Release simulation completed successfully!"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

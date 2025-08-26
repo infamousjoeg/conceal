@@ -39,6 +39,7 @@ jobs:
           MACOS_INSTALLER_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_PASSWORD
           MACOS_INSTALLER_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_IDENTITY
           KEYCHAIN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD
+          CHOCOLATEY_API_KEY: data/infamousdevops/ci/github/infamousjoeg/conceal/CHOCOLATEY_API_KEY
 
     - name: Generate changelog
       run: |
@@ -92,6 +93,8 @@ jobs:
         MACOS_INSTALLER_P12: ${{ env.MACOS_INSTALLER_P12 }}
         MACOS_INSTALLER_PASSWORD: ${{ env.MACOS_INSTALLER_PASSWORD }}
         MACOS_INSTALLER_IDENTITY: ${{ env.MACOS_INSTALLER_IDENTITY }}
+        # Chocolatey Package Management (from Conjur)
+        CHOCOLATEY_API_KEY: ${{ env.CHOCOLATEY_API_KEY }}
 
     - name: Clean up keychain
       if: ${{ always() }}
