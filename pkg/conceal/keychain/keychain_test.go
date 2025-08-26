@@ -38,7 +38,7 @@ func TestAddSecret(t *testing.T) {
 	}
 
 	// Cleanup
-	DeleteSecret("test_secret_add")
+	_ = DeleteSecret("test_secret_add")
 }
 
 func TestSecretExists(t *testing.T) {
@@ -52,7 +52,7 @@ func TestSecretExists(t *testing.T) {
 	}
 
 	// Add a test secret first
-	AddSecret("test_secret_exists", []byte("password1"))
+	_ = AddSecret("test_secret_exists", []byte("password1"))
 
 	// Test case where secret exists
 	exists := SecretExists("test_secret_exists")
@@ -67,7 +67,7 @@ func TestSecretExists(t *testing.T) {
 	}
 
 	// Cleanup
-	DeleteSecret("test_secret_exists")
+	_ = DeleteSecret("test_secret_exists")
 }
 
 func TestListSecrets(t *testing.T) {
@@ -81,7 +81,7 @@ func TestListSecrets(t *testing.T) {
 	}
 
 	// Add a test secret first
-	AddSecret("test_secret_list", []byte("password1"))
+	_ = AddSecret("test_secret_list", []byte("password1"))
 
 	// Test case where secrets exist
 	secrets := ListSecrets()
@@ -90,7 +90,7 @@ func TestListSecrets(t *testing.T) {
 	}
 
 	// Cleanup
-	DeleteSecret("test_secret_list")
+	_ = DeleteSecret("test_secret_list")
 }
 
 func TestGetSecret(t *testing.T) {
@@ -115,7 +115,7 @@ func TestGetSecret(t *testing.T) {
 	}
 
 	// Add a test secret first
-	AddSecret("test_secret_get", []byte("password1"))
+	_ = AddSecret("test_secret_get", []byte("password1"))
 
 	// Test case where secret exists and delivery is stdout (safer for CI)
 	err := GetSecret("test_secret_get", "stdout")
@@ -130,7 +130,7 @@ func TestGetSecret(t *testing.T) {
 	}
 
 	// Cleanup
-	DeleteSecret("test_secret_get")
+	_ = DeleteSecret("test_secret_get")
 }
 
 func TestUpdateSecret(t *testing.T) {
@@ -147,7 +147,7 @@ func TestUpdateSecret(t *testing.T) {
 	}
 
 	// Add a test secret first
-	AddSecret("test_secret_update", []byte("password1"))
+	_ = AddSecret("test_secret_update", []byte("password1"))
 
 	// Test case where secret exists
 	err := UpdateSecret("test_secret_update", []byte("newpassword"))
@@ -162,7 +162,7 @@ func TestUpdateSecret(t *testing.T) {
 	}
 
 	// Cleanup
-	DeleteSecret("test_secret_update")
+	_ = DeleteSecret("test_secret_update")
 }
 
 func TestDeleteSecret(t *testing.T) {
@@ -179,7 +179,7 @@ func TestDeleteSecret(t *testing.T) {
 	}
 
 	// Add a test secret first
-	AddSecret("test_secret_delete", []byte("password1"))
+	_ = AddSecret("test_secret_delete", []byte("password1"))
 
 	// Test case where secret exists
 	err := DeleteSecret("test_secret_delete")
@@ -204,12 +204,13 @@ func TestListSecretsNone(t *testing.T) {
 		return
 	}
 
-	// Test case where no summon secrets exist
-	// Note: This test may fail if other tests leave secrets behind
-	// or if there are existing summon secrets in the keychain
+	// Test case where we can call ListSecrets successfully
+	// Note: We can't assume the keychain is empty, so we just check that the function works
 	secrets := ListSecrets()
-	// We can't assume the keychain is empty, so we just check that the function works
+	// The function should always return a slice (empty or with items), never nil
 	if secrets == nil {
 		t.Errorf("Expected ListSecrets to return non-nil slice, but got nil")
 	}
+	// The slice should be valid (this tests the function doesn't panic)
+	_ = len(secrets)
 }
