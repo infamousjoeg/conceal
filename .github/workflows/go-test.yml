@@ -40,6 +40,7 @@ jobs:
       run: go mod download
 
     - name: Run Tests with Coverage
+      shell: bash
       run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
@@ -79,7 +80,7 @@ jobs:
 
     - name: Cross Compile for macOS
       run: |
-        GOOS=darwin GOARCH=amd64 go build -o conceal-darwin .
+        CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o conceal-darwin .
         ls -la conceal-darwin
 
     - name: Cross Compile for Linux

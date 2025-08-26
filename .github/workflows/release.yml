@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest  # Changed to macOS for code signing and notarization
     steps:
     - uses: actions/checkout@v4
       with:
@@ -21,6 +21,26 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: stable
+
+    - name: Fetch secrets from CyberArk Conjur
+      uses: cyberark/conjur-action@v2
+      with:
+        url: https://pineapple.secretsmgr.cyberark.cloud/api
+        authn_id: inf-github
+        account: cyberark
+      env:
+        CONJUR_AUTHN_JWT: ${{ secrets.GITHUB_TOKEN }}
+      secrets: |
+        MACOS_SIGN_P12: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_P12
+        MACOS_SIGN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_PASSWORD
+        MACOS_SIGN_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_IDENTITY
+        MACOS_NOTARY_ISSUER_ID: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_ISSUER_ID
+        MACOS_NOTARY_KEY_ID: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY_ID
+        MACOS_NOTARY_KEY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY
+        MACOS_INSTALLER_P12: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_P12
+        MACOS_INSTALLER_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_PASSWORD
+        MACOS_INSTALLER_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_IDENTITY
+        KEYCHAIN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD
 
     - name: Generate changelog
       run: |
@@ -34,6 +54,26 @@ jobs:
           git log --oneline >> CHANGELOG.md
         fi
 
+    - name: Import Code-Signing Certificates
+      if: ${{ env.MACOS_SIGN_P12 != '' }}
+      run: |
+        # Create variables for certificate handling
+        CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        
+        # Import certificate and provisioning profile from secrets
+        echo -n "$MACOS_SIGN_P12" | base64 --decode -o $CERTIFICATE_PATH
+        
+        # Create temporary keychain
+        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        
+        # Import certificate to keychain
+        security import $CERTIFICATE_PATH -P "$MACOS_SIGN_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v5
       with:
@@ -42,6 +82,23 @@ jobs:
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Apple Developer Code Signing (from Conjur)
+        MACOS_SIGN_P12: ${{ env.MACOS_SIGN_P12 }}
+        MACOS_SIGN_PASSWORD: ${{ env.MACOS_SIGN_PASSWORD }}
+        MACOS_SIGN_IDENTITY: ${{ env.MACOS_SIGN_IDENTITY }}
+        # Apple Developer Notarization (from Conjur)  
+        MACOS_NOTARY_ISSUER_ID: ${{ env.MACOS_NOTARY_ISSUER_ID }}
+        MACOS_NOTARY_KEY_ID: ${{ env.MACOS_NOTARY_KEY_ID }}
+        MACOS_NOTARY_KEY: ${{ env.MACOS_NOTARY_KEY }}
+        # Apple Developer ID Installer (from Conjur)
+        MACOS_INSTALLER_P12: ${{ env.MACOS_INSTALLER_P12 }}
+        MACOS_INSTALLER_PASSWORD: ${{ env.MACOS_INSTALLER_PASSWORD }}
+        MACOS_INSTALLER_IDENTITY: ${{ env.MACOS_INSTALLER_IDENTITY }}
+
+    - name: Clean up keychain
+      if: ${{ always() }}
+      run: |
+        security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
   homebrew-update:
     needs: release

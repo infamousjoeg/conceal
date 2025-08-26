@@ -57,7 +57,7 @@ func GetPlatform() string {
 	return runtime.GOOS
 }
 
-// IsSupported checks if the current platform supports secret management  
+// IsSupported checks if the current platform supports secret management
 func IsSupported() bool {
 	platform := GetPlatform()
 	return platform == "darwin" || platform == "windows"

@@ -26,7 +26,7 @@ var setCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check platform support
 		conceal.CheckPlatformSupport()
-		
+
 		// Check if secret name is empty
 		secretName := conceal.GetSecretName(args)
 

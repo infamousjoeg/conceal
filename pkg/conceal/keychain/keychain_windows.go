@@ -61,7 +61,10 @@ func GetSecret(secretID string, delivery string) error {
 	} else if delivery == "stdout" {
 		fmt.Printf("%s", password)
 	}
-	password = ""
+	// Clear password from memory for security
+	for i := range password {
+		password = password[:i] + "X" + password[i+1:]
+	}
 
 	return nil
 }

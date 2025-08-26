@@ -19,12 +19,12 @@ func SecretExists(secretID string) bool {
 	query.SetAccount(secretID)
 	query.SetMatchLimit(keychain.MatchLimitOne)
 	query.SetReturnAttributes(true)
-	
+
 	results, err := keychain.QueryItem(query)
 	if err != nil {
 		return false
 	}
-	
+
 	return len(results) > 0
 }
 

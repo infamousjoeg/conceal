@@ -21,7 +21,7 @@ The secret value is copied to the clipboard for 15 seconds.
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check platform support
 		conceal.CheckPlatformSupport()
-		
+
 		secretName := conceal.GetSecretName(args)
 		conceal.PrintInfo("Adding secret value to clipboard for 15 seconds...")
 		err := keychain.GetSecret(secretName, "clipboard")

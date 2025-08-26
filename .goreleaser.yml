@@ -6,12 +6,13 @@ before:
     - go generate ./...
 
 builds:
-  - env:
+  # Windows and Linux builds (no CGO)
+  - id: "cross-platform"
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
-      - darwin
     goarch:
       - "386"
       - amd64
@@ -25,6 +26,53 @@ builds:
       - -X github.com/infamousjoeg/conceal/pkg/conceal.Tag={{.Tag}}
     binary: conceal
 
+  # Darwin build (requires CGO for keychain access)  
+  - id: "darwin"
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/infamousjoeg/conceal/pkg/conceal.Version={{.Version}}
+      - -X github.com/infamousjoeg/conceal/pkg/conceal.Tag={{.Tag}}
+    binary: conceal
+    hooks:
+      post:
+        # Sign the binary with Apple Developer certificate
+        - cmd: |
+            if [ -n "$MACOS_SIGN_P12" ] && [ -n "$MACOS_SIGN_PASSWORD" ]; then
+              echo "Signing Darwin binary..."
+              # Create temporary keychain
+              TEMP_KEYCHAIN="temp-signing-keychain"
+              TEMP_KEYCHAIN_PATH="$HOME/Library/Keychains/$TEMP_KEYCHAIN.keychain-db"
+              
+              # Decode and import certificate
+              echo "$MACOS_SIGN_P12" | base64 -d > certificate.p12
+              security create-keychain -p "temp" "$TEMP_KEYCHAIN_PATH"
+              security set-keychain-settings -lut 21600 "$TEMP_KEYCHAIN_PATH"
+              security unlock-keychain -p "temp" "$TEMP_KEYCHAIN_PATH"
+              security import certificate.p12 -P "$MACOS_SIGN_PASSWORD" -k "$TEMP_KEYCHAIN_PATH" -T /usr/bin/codesign
+              security list-keychains -d user -s "$TEMP_KEYCHAIN_PATH" $(security list-keychains -d user | sed s/\"//g)
+              security set-key-partition-list -S apple-tool:,apple: -s -k "temp" "$TEMP_KEYCHAIN_PATH"
+              
+              # Sign the binary
+              codesign --force --sign "$MACOS_SIGN_IDENTITY" --options=runtime --entitlements=./scripts/entitlements.plist "{{ .Path }}" || echo "Signing failed, continuing..."
+              
+              # Clean up
+              rm -f certificate.p12
+              security delete-keychain "$TEMP_KEYCHAIN_PATH" || true
+            else
+              echo "Skipping code signing - certificates not provided"
+            fi
+          env:
+            - MACOS_SIGN_P12={{ .Env.MACOS_SIGN_P12 }}
+            - MACOS_SIGN_PASSWORD={{ .Env.MACOS_SIGN_PASSWORD }}
+            - MACOS_SIGN_IDENTITY={{ .Env.MACOS_SIGN_IDENTITY }}
+
 archives:
   - format: tar.gz
     name_template: >-
@@ -37,6 +85,88 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+
+# macOS notarization
+notarize:
+  macos:
+    - enabled: '{{ ne .Env.MACOS_NOTARY_KEY_ID "" }}'
+      ids: 
+        - darwin  # Only notarize Darwin builds
+      sign:
+        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"
+        wait: true
+        timeout: 20m
+
+# macOS .pkg installer
+nfpms:
+  - id: conceal-pkg
+    builds:
+      - darwin  # Only create .pkg for Darwin builds
+    package_name: conceal
+    vendor: infamousjoeg
+    homepage: https://github.com/infamousjoeg/conceal
+    maintainer: Joe Garcia <infamousjoeg@gmail.com>
+    description: Cross-platform secret management using native OS credential stores
+    license: MIT
+    formats:
+      - pkg
+    bindir: /usr/local/bin
+    meta: true
+    scripts:
+      postinstall: |
+        #!/bin/bash
+        echo "Conceal has been installed to /usr/local/bin/conceal"
+        echo "You can now use 'conceal' from anywhere in your terminal"
+        
+        # Add to PATH if not already present
+        if ! echo $PATH | grep -q "/usr/local/bin"; then
+          echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+          echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bash_profile
+        fi
+
+# Sign .pkg files with Developer ID Installer certificate
+signs:
+  - cmd: |
+      if [ -n "$MACOS_INSTALLER_P12" ] && [ -n "$MACOS_INSTALLER_PASSWORD" ]; then
+        echo "Signing .pkg installer..."
+        
+        # Create temporary keychain for installer certificate
+        INSTALLER_KEYCHAIN="temp-installer-keychain"
+        INSTALLER_KEYCHAIN_PATH="$HOME/Library/Keychains/$INSTALLER_KEYCHAIN.keychain-db"
+        
+        # Decode and import installer certificate
+        echo "$MACOS_INSTALLER_P12" | base64 -d > installer_certificate.p12
+        security create-keychain -p "temp" "$INSTALLER_KEYCHAIN_PATH"
+        security set-keychain-settings -lut 21600 "$INSTALLER_KEYCHAIN_PATH"
+        security unlock-keychain -p "temp" "$INSTALLER_KEYCHAIN_PATH"
+        security import installer_certificate.p12 -P "$MACOS_INSTALLER_PASSWORD" -k "$INSTALLER_KEYCHAIN_PATH" -T /usr/bin/productsign
+        security list-keychains -d user -s "$INSTALLER_KEYCHAIN_PATH" $(security list-keychains -d user | sed s/\"//g)
+        security set-key-partition-list -S apple-tool:,apple: -s -k "temp" "$INSTALLER_KEYCHAIN_PATH"
+        
+        # Sign the .pkg
+        productsign --sign "$MACOS_INSTALLER_IDENTITY" "${artifact}" "${artifact}.signed"
+        mv "${artifact}.signed" "${artifact}"
+        
+        # Clean up
+        rm -f installer_certificate.p12
+        security delete-keychain "$INSTALLER_KEYCHAIN_PATH" || true
+        
+        echo "Successfully signed .pkg installer"
+      else
+        echo "Skipping .pkg signing - installer certificates not provided"
+      fi
+    artifacts: all
+    ids:
+      - conceal-pkg
+    env:
+      - MACOS_INSTALLER_P12={{ .Env.MACOS_INSTALLER_P12 }}
+      - MACOS_INSTALLER_PASSWORD={{ .Env.MACOS_INSTALLER_PASSWORD }}
+      - MACOS_INSTALLER_IDENTITY={{ .Env.MACOS_INSTALLER_IDENTITY }}
 
 checksum:
   name_template: 'checksums.txt'
