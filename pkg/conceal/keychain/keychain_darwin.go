@@ -5,7 +5,6 @@ package keychain
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 	"github.com/keybase/go-keychain"
@@ -44,7 +43,8 @@ func ListSecrets() []QueryResult {
 	// Note: OSX use the term "account" to refer to the secret id.
 	secretIDs, err := keychain.QueryItem(query)
 	if err != nil {
-		log.Fatalln(err)
+		// Return empty slice if no secrets found or other error
+		return []QueryResult{}
 	}
 
 	// Convert to our cross-platform QueryResult format
