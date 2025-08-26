@@ -28,19 +28,17 @@ jobs:
         url: https://pineapple.secretsmgr.cyberark.cloud/api
         authn_id: inf-github
         account: cyberark
-      env:
-        CONJUR_AUTHN_JWT: ${{ secrets.GITHUB_TOKEN }}
-      secrets: |
-        MACOS_SIGN_P12: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_P12
-        MACOS_SIGN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_PASSWORD
-        MACOS_SIGN_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_IDENTITY
-        MACOS_NOTARY_ISSUER_ID: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_ISSUER_ID
-        MACOS_NOTARY_KEY_ID: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY_ID
-        MACOS_NOTARY_KEY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY
-        MACOS_INSTALLER_P12: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_P12
-        MACOS_INSTALLER_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_PASSWORD
-        MACOS_INSTALLER_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_IDENTITY
-        KEYCHAIN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD
+        secrets: |
+          MACOS_SIGN_P12: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_P12
+          MACOS_SIGN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_PASSWORD
+          MACOS_SIGN_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_IDENTITY
+          MACOS_NOTARY_ISSUER_ID: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_ISSUER_ID
+          MACOS_NOTARY_KEY_ID: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY_ID
+          MACOS_NOTARY_KEY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY
+          MACOS_INSTALLER_P12: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_P12
+          MACOS_INSTALLER_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_PASSWORD
+          MACOS_INSTALLER_IDENTITY: data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_IDENTITY
+          KEYCHAIN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD
 
     - name: Generate changelog
       run: |
