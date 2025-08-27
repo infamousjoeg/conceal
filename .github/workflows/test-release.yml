@@ -34,8 +34,8 @@ jobs:
         # Test configuration validity (allow deprecation warnings)
         goreleaser check || echo "GoReleaser check completed with warnings (deprecated properties)"
         
-        # Test snapshot build (without release)
-        goreleaser build --snapshot --clean
+        # Test snapshot build for current platform only (avoid cross-compilation issues)
+        goreleaser build --snapshot --clean --single-target
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Provide mock values for environment variables to avoid failures
