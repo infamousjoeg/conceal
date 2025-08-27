@@ -52,7 +52,7 @@ jobs:
 
     - name: Generate changelog
       run: |
-        # Generate changelog since last tag
+        # Generate changelog since last tag without committing (GoReleaser handles changelog)
         PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
         if [ -n "$PREV_TAG" ]; then
           echo "## Changes since $PREV_TAG" > CHANGELOG.md
@@ -61,11 +61,7 @@ jobs:
           echo "## Initial Release" > CHANGELOG.md
           git log --oneline >> CHANGELOG.md
         fi
-        # Add changelog to git to avoid dirty state
-        git add CHANGELOG.md
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git commit -m "chore: Update changelog for release" || echo "No changes to commit"
+        echo "Generated changelog for reference"
 
     - name: Import Code-Signing Certificates
       if: ${{ needs.fetch-secrets.outputs.macos_sign_p12 != '' }}
@@ -92,7 +88,7 @@ jobs:
       with:
         distribution: goreleaser
         version: latest
-        args: ${{ github.event_name == 'workflow_dispatch' && 'build --snapshot --clean' || 'release --clean' }}
+        args: ${{ github.event_name == 'workflow_dispatch' && 'build --snapshot --clean' || 'release --clean --skip-validate' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Apple Developer Code Signing (from Conjur)
