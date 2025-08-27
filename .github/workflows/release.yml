@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,7 +24,7 @@ jobs:
         go-version: stable
 
     - name: Fetch secrets from CyberArk Conjur
-      uses: cyberark/conjur-action@v2
+      uses: cyberark/conjur-action@v2.0.12
       with:
         url: https://pineapple.secretsmgr.cyberark.cloud/api
         authn_id: inf-github

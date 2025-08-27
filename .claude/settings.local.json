@@ -10,9 +10,18 @@
       "Bash(go:*)",
       "Bash(./conceal-test version)",
       "Bash(GOOS=windows GOARCH=amd64 go build -o conceal.exe .)",
-      "Bash(GOOS=linux GOARCH=amd64 go build -o conceal-linux .)"
+      "Bash(GOOS=linux GOARCH=amd64 go build -o conceal-linux .)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git stash:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
   }
 }
