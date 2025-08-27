@@ -123,5 +123,6 @@ jobs:
         formula-name: conceal
         homebrew-tap: infamousjoeg/homebrew-tap
         base-branch: master
+        formula-path: conceal.rb
       env:
         COMMITTER_TOKEN: ${{ needs.fetch-secrets.outputs.committer_token || secrets.COMMITTER_TOKEN }}
