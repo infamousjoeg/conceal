@@ -38,6 +38,17 @@ jobs:
         goreleaser build --snapshot --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Provide mock values for environment variables to avoid failures
+        CHOCOLATEY_API_KEY: "mock-api-key-for-testing"
+        MACOS_SIGN_P12: ""
+        MACOS_SIGN_PASSWORD: ""
+        MACOS_SIGN_IDENTITY: ""
+        MACOS_NOTARY_ISSUER_ID: ""
+        MACOS_NOTARY_KEY_ID: ""
+        MACOS_NOTARY_KEY: ""
+        MACOS_INSTALLER_P12: ""
+        MACOS_INSTALLER_PASSWORD: ""
+        MACOS_INSTALLER_IDENTITY: ""
 
     - name: Test Cross-Platform Builds
       run: |
@@ -122,3 +133,14 @@ jobs:
         echo "Release simulation completed successfully!"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Provide mock values for environment variables to avoid failures
+        CHOCOLATEY_API_KEY: "mock-api-key-for-testing"
+        MACOS_SIGN_P12: ""
+        MACOS_SIGN_PASSWORD: ""
+        MACOS_SIGN_IDENTITY: ""
+        MACOS_NOTARY_ISSUER_ID: ""
+        MACOS_NOTARY_KEY_ID: ""
+        MACOS_NOTARY_KEY: ""
+        MACOS_INSTALLER_P12: ""
+        MACOS_INSTALLER_PASSWORD: ""
+        MACOS_INSTALLER_IDENTITY: ""
