@@ -11,19 +11,23 @@ permissions:
   packages: write
 
 jobs:
-  release:
-    runs-on: macos-latest  # Changed to macOS for code signing and notarization
+  fetch-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      macos_sign_p12: ${{ steps.secrets.outputs.MACOS_SIGN_P12 }}
+      macos_sign_password: ${{ steps.secrets.outputs.MACOS_SIGN_PASSWORD }}
+      macos_sign_identity: ${{ steps.secrets.outputs.MACOS_SIGN_IDENTITY }}
+      macos_notary_issuer_id: ${{ steps.secrets.outputs.MACOS_NOTARY_ISSUER_ID }}
+      macos_notary_key_id: ${{ steps.secrets.outputs.MACOS_NOTARY_KEY_ID }}
+      macos_notary_key: ${{ steps.secrets.outputs.MACOS_NOTARY_KEY }}
+      macos_installer_p12: ${{ steps.secrets.outputs.MACOS_INSTALLER_P12 }}
+      macos_installer_password: ${{ steps.secrets.outputs.MACOS_INSTALLER_PASSWORD }}
+      macos_installer_identity: ${{ steps.secrets.outputs.MACOS_INSTALLER_IDENTITY }}
+      keychain_password: ${{ steps.secrets.outputs.KEYCHAIN_PASSWORD }}
+      chocolatey_api_key: ${{ steps.secrets.outputs.CHOCOLATEY_API_KEY }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-
     - name: Fetch secrets from CyberArk Conjur
+      id: secrets
       uses: cyberark/conjur-action@v2.0.12
       with:
         url: https://pineapple.secretsmgr.cyberark.cloud/api
@@ -42,6 +46,19 @@ jobs:
           KEYCHAIN_PASSWORD: data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD
           CHOCOLATEY_API_KEY: data/infamousdevops/ci/github/infamousjoeg/conceal/CHOCOLATEY_API_KEY
 
+  release:
+    needs: fetch-secrets
+    runs-on: macos-latest  # Changed to macOS for code signing and notarization
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+
     - name: Generate changelog
       run: |
         # Generate changelog since last tag
@@ -55,23 +72,23 @@ jobs:
         fi
 
     - name: Import Code-Signing Certificates
-      if: ${{ env.MACOS_SIGN_P12 != '' }}
+      if: ${{ needs.fetch-secrets.outputs.macos_sign_p12 != '' }}
       run: |
         # Create variables for certificate handling
         CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
         
         # Import certificate and provisioning profile from secrets
-        echo -n "$MACOS_SIGN_P12" | base64 --decode -o $CERTIFICATE_PATH
+        echo -n "${{ needs.fetch-secrets.outputs.macos_sign_p12 }}" | base64 --decode -o $CERTIFICATE_PATH
         
         # Create temporary keychain
-        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security create-keychain -p "${{ needs.fetch-secrets.outputs.keychain_password }}" $KEYCHAIN_PATH
         security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security unlock-keychain -p "${{ needs.fetch-secrets.outputs.keychain_password }}" $KEYCHAIN_PATH
         
         # Import certificate to keychain
-        security import $CERTIFICATE_PATH -P "$MACOS_SIGN_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security import $CERTIFICATE_PATH -P "${{ needs.fetch-secrets.outputs.macos_sign_password }}" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security set-key-partition-list -S apple-tool:,apple: -s -k "${{ needs.fetch-secrets.outputs.keychain_password }}" $KEYCHAIN_PATH
         security list-keychain -d user -s $KEYCHAIN_PATH
 
     - name: Run GoReleaser
@@ -83,19 +100,19 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Apple Developer Code Signing (from Conjur)
-        MACOS_SIGN_P12: ${{ env.MACOS_SIGN_P12 }}
-        MACOS_SIGN_PASSWORD: ${{ env.MACOS_SIGN_PASSWORD }}
-        MACOS_SIGN_IDENTITY: ${{ env.MACOS_SIGN_IDENTITY }}
+        MACOS_SIGN_P12: ${{ needs.fetch-secrets.outputs.macos_sign_p12 }}
+        MACOS_SIGN_PASSWORD: ${{ needs.fetch-secrets.outputs.macos_sign_password }}
+        MACOS_SIGN_IDENTITY: ${{ needs.fetch-secrets.outputs.macos_sign_identity }}
         # Apple Developer Notarization (from Conjur)  
-        MACOS_NOTARY_ISSUER_ID: ${{ env.MACOS_NOTARY_ISSUER_ID }}
-        MACOS_NOTARY_KEY_ID: ${{ env.MACOS_NOTARY_KEY_ID }}
-        MACOS_NOTARY_KEY: ${{ env.MACOS_NOTARY_KEY }}
+        MACOS_NOTARY_ISSUER_ID: ${{ needs.fetch-secrets.outputs.macos_notary_issuer_id }}
+        MACOS_NOTARY_KEY_ID: ${{ needs.fetch-secrets.outputs.macos_notary_key_id }}
+        MACOS_NOTARY_KEY: ${{ needs.fetch-secrets.outputs.macos_notary_key }}
         # Apple Developer ID Installer (from Conjur)
-        MACOS_INSTALLER_P12: ${{ env.MACOS_INSTALLER_P12 }}
-        MACOS_INSTALLER_PASSWORD: ${{ env.MACOS_INSTALLER_PASSWORD }}
-        MACOS_INSTALLER_IDENTITY: ${{ env.MACOS_INSTALLER_IDENTITY }}
+        MACOS_INSTALLER_P12: ${{ needs.fetch-secrets.outputs.macos_installer_p12 }}
+        MACOS_INSTALLER_PASSWORD: ${{ needs.fetch-secrets.outputs.macos_installer_password }}
+        MACOS_INSTALLER_IDENTITY: ${{ needs.fetch-secrets.outputs.macos_installer_identity }}
         # Chocolatey Package Management (from Conjur)
-        CHOCOLATEY_API_KEY: ${{ env.CHOCOLATEY_API_KEY }}
+        CHOCOLATEY_API_KEY: ${{ needs.fetch-secrets.outputs.chocolatey_api_key }}
 
     - name: Clean up keychain
       if: ${{ always() }}
