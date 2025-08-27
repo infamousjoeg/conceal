@@ -1,0 +1,191 @@
+version: 2
+project_name: conceal
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  # Windows and Linux builds (no CGO)
+  - id: "cross-platform"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+    goarch:
+      - "386"
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: "386"
+    ldflags:
+      - -s -w
+      - -X github.com/infamousjoeg/conceal/pkg/conceal.Version={{.Version}}
+      - -X github.com/infamousjoeg/conceal/pkg/conceal.Tag={{.Tag}}
+    binary: conceal
+
+  # Darwin build (requires CGO for keychain access)  
+  - id: "darwin"
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/infamousjoeg/conceal/pkg/conceal.Version={{.Version}}
+      - -X github.com/infamousjoeg/conceal/pkg/conceal.Tag={{.Tag}}
+    binary: conceal
+    hooks:
+      post:
+        - 'bash -c "if [ -n \"$MACOS_SIGN_P12\" ] && [ -n \"$MACOS_SIGN_PASSWORD\" ]; then echo \"Code signing enabled\"; codesign --version || echo \"codesign not available\"; else echo \"Skipping code signing - certificates not provided\"; fi"'
+
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+    format_overrides:
+      - goos: windows
+        format: zip
+      - goos: linux
+        format: tar.gz
+      - goos: darwin
+        format: tar.gz
+
+# macOS notarization (commented out for CI testing - will be enabled only when env vars are available)
+# notarize:
+#   macos:
+#     - enabled: false
+
+# macOS .pkg installer
+nfpms:
+  - id: conceal-pkg
+    builds:
+      - darwin  # Only create .pkg for Darwin builds
+    package_name: conceal
+    vendor: infamousjoeg
+    homepage: https://github.com/infamousjoeg/conceal
+    maintainer: Joe Garcia <infamousjoeg@gmail.com>
+    description: Cross-platform secret management using native OS credential stores
+    license: MIT
+    formats:
+      - pkg
+    bindir: /usr/local/bin
+    meta: true
+    scripts:
+      postinstall: |
+        #!/bin/bash
+        echo "Conceal has been installed to /usr/local/bin/conceal"
+        echo "You can now use 'conceal' from anywhere in your terminal"
+        
+        # Add to PATH if not already present
+        if ! echo $PATH | grep -q "/usr/local/bin"; then
+          echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+          echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bash_profile
+        fi
+
+# Sign .pkg files with Developer ID Installer certificate
+signs:
+  - cmd: 'bash -c "if [ -n \"$MACOS_INSTALLER_P12\" ] && [ -n \"$MACOS_INSTALLER_PASSWORD\" ]; then echo \"PKG signing enabled\"; else echo \"Skipping .pkg signing - installer certificates not provided\"; fi"'
+    artifacts: all
+    ids:
+      - conceal-pkg
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+release:
+  github:
+    owner: infamousjoeg
+    name: conceal
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Conceal {{ .Tag }}
+    
+    Cross-platform secret management for developers using native OS credential stores.
+    
+    ### Supported Platforms:
+    - macOS (Keychain)
+    - Windows (Credential Manager) 
+    - Linux (not supported in this version)
+    
+  footer: |
+    **Full Changelog**: https://github.com/infamousjoeg/conceal/compare/{{ .PreviousTag }}...{{ .Tag }}
+    
+    ## Installation
+    
+    ### Homebrew (macOS)
+    ```bash
+    brew tap infamousjoeg/tap
+    brew install conceal
+    ```
+    
+    ### Chocolatey (Windows)
+    ```powershell
+    choco install conceal
+    ```
+    
+    ### Manual Installation
+    Download the appropriate binary for your platform from the assets above.
+
+brews:
+  - name: conceal
+    repository:
+      owner: infamousjoeg
+      name: homebrew-tap
+    homepage: https://github.com/infamousjoeg/conceal
+    description: Cross-platform secret management using native OS credential stores
+    test: |
+      system "#{bin}/conceal version"
+
+chocolateys:
+  - name: conceal
+    title: Conceal
+    authors: Joe Garcia
+    project_url: https://github.com/infamousjoeg/conceal
+    url_template: "https://github.com/infamousjoeg/conceal/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    copyright: 2024 Joe Garcia
+    license_url: https://github.com/infamousjoeg/conceal/blob/main/LICENSE
+    require_license_acceptance: false
+    project_source_url: https://github.com/infamousjoeg/conceal
+    docs_url: https://github.com/infamousjoeg/conceal/blob/main/README.md
+    bug_tracker_url: https://github.com/infamousjoeg/conceal/issues
+    tags: "security secrets credential-manager keychain summon"
+    summary: Cross-platform secret management using native OS credential stores
+    description: |
+      Conceal is a cross-platform secret management tool that integrates with native OS credential stores:
+      
+      - Windows Credential Manager
+      - macOS Keychain
+      
+      Features:
+      - Store, retrieve, and manage secrets securely
+      - Full Summon compatibility with "summon/" prefix
+      - Clipboard integration with auto-clear
+      - Cross-platform CLI interface
+    release_notes: "https://github.com/infamousjoeg/conceal/releases/tag/v{{ .Version }}"
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"

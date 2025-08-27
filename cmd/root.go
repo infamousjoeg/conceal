@@ -12,11 +12,11 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "conceal",
-	Short: "Conceal is a command-line utility that eases the interaction between developer and OSX Keychain Access.",
+	Short: "Conceal is a command-line utility that eases the interaction between developer and OS secret providers.",
 	Long: `Conceal is a command-line utility that eases the interaction between 
-developer and the OS secret provider, like MacOS Keychain. It is the open-source companion to Summon 
-as every secret added using this tool into Keychain is added using 
-Summon-compliant formatting.
+developer and OS secret providers, like MacOS Keychain and Windows Credential Manager. 
+It is the open-source companion to Summon as every secret added using this tool is 
+added using Summon-compliant formatting.
 	
 	Example Usages:
 	$ conceal set app/secret

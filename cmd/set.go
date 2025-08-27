@@ -24,6 +24,9 @@ var setCmd = &cobra.Command{
 	$ conceal set aws/access_key_id
 	$ echo "my_secret_value" | conceal set aws/access_key_id`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Check platform support
+		conceal.CheckPlatformSupport()
+
 		// Check if secret name is empty
 		secretName := conceal.GetSecretName(args)
 

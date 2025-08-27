@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh run view:*)",
+      "Bash(go run:*)",
+      "Bash(gh api:*)",
+      "Bash(goreleaser check:*)",
+      "Bash(go:*)",
+      "Bash(./conceal-test version)",
+      "Bash(GOOS=windows GOARCH=amd64 go build -o conceal.exe .)",
+      "Bash(GOOS=linux GOARCH=amd64 go build -o conceal-linux .)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

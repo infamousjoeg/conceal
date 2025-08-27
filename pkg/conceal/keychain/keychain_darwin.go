@@ -1,8 +1,10 @@
+//go:build darwin
+// +build darwin
+
 package keychain
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 	"github.com/keybase/go-keychain"
@@ -10,21 +12,29 @@ import (
 
 // SecretExists is a boolean function to verify a secret is present in keychain
 func SecretExists(secretID string) bool {
-	allSecretIDs := ListSecrets()
+	query := keychain.NewItem()
+	query.SetSecClass(keychain.SecClassGenericPassword)
+	query.SetService("summon")
+	query.SetAccount(secretID)
+	query.SetMatchLimit(keychain.MatchLimitOne)
+	query.SetReturnAttributes(true)
 
-	// Search all the available secretIDs for this one
-	for _, account := range allSecretIDs {
-		if account.Account == secretID {
-			return true
-		}
+	results, err := keychain.QueryItem(query)
+	if err != nil {
+		return false
 	}
 
-	return false
+	return len(results) > 0
+}
+
+// QueryResult represents a query result for cross-platform compatibility
+type QueryResult struct {
+	Account string
 }
 
 // ListSecrets is a string array function that returns all secrets in keychain
 // with the label `summon`.
-func ListSecrets() []keychain.QueryResult {
+func ListSecrets() []QueryResult {
 	query := keychain.NewItem()
 	query.SetSecClass(keychain.SecClassGenericPassword)
 	query.SetService("summon")
@@ -33,10 +43,19 @@ func ListSecrets() []keychain.QueryResult {
 	// Note: OSX use the term "account" to refer to the secret id.
 	secretIDs, err := keychain.QueryItem(query)
 	if err != nil {
-		log.Fatalln(err)
+		// Return empty slice if no secrets found or other error
+		return []QueryResult{}
 	}
 
-	return secretIDs
+	// Convert to our cross-platform QueryResult format
+	results := make([]QueryResult, 0, len(secretIDs))
+	for _, secret := range secretIDs {
+		results = append(results, QueryResult{
+			Account: secret.Account,
+		})
+	}
+
+	return results
 }
 
 // AddSecret is a boolean function that adds the secret and secret value to
