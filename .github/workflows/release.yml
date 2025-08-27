@@ -61,6 +61,11 @@ jobs:
           echo "## Initial Release" > CHANGELOG.md
           git log --oneline >> CHANGELOG.md
         fi
+        # Add changelog to git to avoid dirty state
+        git add CHANGELOG.md
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git commit -m "chore: Update changelog for release" || echo "No changes to commit"
 
     - name: Import Code-Signing Certificates
       if: ${{ needs.fetch-secrets.outputs.macos_sign_p12 != '' }}
