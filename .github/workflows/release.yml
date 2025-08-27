@@ -83,7 +83,7 @@ jobs:
         security list-keychain -d user -s $KEYCHAIN_PATH
 
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v4
+      uses: goreleaser/goreleaser-action@v6
       with:
         distribution: goreleaser
         version: latest
