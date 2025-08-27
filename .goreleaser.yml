@@ -69,8 +69,8 @@ archives:
 #   macos:
 #     - enabled: false
 
-# macOS .pkg installer
-nfpms:
+# macOS .pkg installer - use pkgs section instead of nfpms for macOS
+pkgs:
   - id: conceal-pkg
     builds:
       - darwin  # Only create .pkg for Darwin builds
@@ -80,10 +80,7 @@ nfpms:
     maintainer: Joe Garcia <infamousjoeg@gmail.com>
     description: Cross-platform secret management using native OS credential stores
     license: MIT
-    formats:
-      - pkg
     bindir: /usr/local/bin
-    meta: true
     scripts:
       postinstall: |
         #!/bin/bash
