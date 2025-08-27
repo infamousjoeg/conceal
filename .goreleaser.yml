@@ -131,30 +131,32 @@ brews:
     test: |
       system "#{bin}/conceal version"
 
-chocolateys:
-  - name: conceal
-    title: Conceal
-    authors: Joe Garcia
-    project_url: https://github.com/infamousjoeg/conceal
-    url_template: "https://github.com/infamousjoeg/conceal/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    copyright: 2024 Joe Garcia
-    license_url: https://github.com/infamousjoeg/conceal/blob/main/LICENSE
-    require_license_acceptance: false
-    project_source_url: https://github.com/infamousjoeg/conceal
-    docs_url: https://github.com/infamousjoeg/conceal/blob/main/README.md
-    bug_tracker_url: https://github.com/infamousjoeg/conceal/issues
-    tags: "security secrets credential-manager keychain summon"
-    summary: Cross-platform secret management using native OS credential stores
-    description: |
-      Conceal is a cross-platform secret management tool that integrates with native OS credential stores:
-      
-      - Windows Credential Manager
-      - macOS Keychain
-      
-      Features:
-      - Store, retrieve, and manage secrets securely
-      - Full Summon compatibility with "summon/" prefix
-      - Clipboard integration with auto-clear
-      - Cross-platform CLI interface
-    release_notes: "https://github.com/infamousjoeg/conceal/releases/tag/v{{ .Version }}"
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+# Chocolatey packaging disabled - choco executable not available on macOS runners
+# Windows users can download binaries directly from GitHub releases
+# chocolateys:
+#   - name: conceal
+#     title: Conceal
+#     authors: Joe Garcia
+#     project_url: https://github.com/infamousjoeg/conceal
+#     url_template: "https://github.com/infamousjoeg/conceal/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+#     copyright: 2024 Joe Garcia
+#     license_url: https://github.com/infamousjoeg/conceal/blob/main/LICENSE
+#     require_license_acceptance: false
+#     project_source_url: https://github.com/infamousjoeg/conceal
+#     docs_url: https://github.com/infamousjoeg/conceal/blob/main/README.md
+#     bug_tracker_url: https://github.com/infamousjoeg/conceal/issues
+#     tags: "security secrets credential-manager keychain summon"
+#     summary: Cross-platform secret management using native OS credential stores
+#     description: |
+#       Conceal is a cross-platform secret management tool that integrates with native OS credential stores:
+#       
+#       - Windows Credential Manager
+#       - macOS Keychain
+#       
+#       Features:
+#       - Store, retrieve, and manage secrets securely
+#       - Full Summon compatibility with "summon/" prefix
+#       - Clipboard integration with auto-clear
+#       - Cross-platform CLI interface
+#     release_notes: "https://github.com/infamousjoeg/conceal/releases/tag/v{{ .Version }}"
+#     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
