@@ -134,8 +134,6 @@ release:
 
 chocolateys:
   - name: conceal
-    ids:
-      - cross-platform
     title: Conceal
     authors: Joe Garcia
     project_url: https://github.com/infamousjoeg/conceal
@@ -148,6 +146,7 @@ chocolateys:
     bug_tracker_url: https://github.com/infamousjoeg/conceal/issues
     tags: "security secrets credential-manager keychain summon"
     summary: Cross-platform secret management using native OS credential stores
+    goamd64: v1
     description: |
       Conceal is a cross-platform secret management tool that integrates with native OS credential stores:
       
