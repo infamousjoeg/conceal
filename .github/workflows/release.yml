@@ -124,4 +124,4 @@ jobs:
         homebrew-tap: infamousjoeg/homebrew-tap
         base-branch: main
       env:
-        COMMITTER_TOKEN: ${{ needs.fetch-secrets.outputs.committer_token }}
+        COMMITTER_TOKEN: ${{ needs.fetch-secrets.outputs.committer_token || secrets.COMMITTER_TOKEN }}
