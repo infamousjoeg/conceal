@@ -26,6 +26,7 @@ jobs:
       macos_installer_identity: ${{ steps.secrets.outputs.MACOS_INSTALLER_IDENTITY }}
       keychain_password: ${{ steps.secrets.outputs.KEYCHAIN_PASSWORD }}
       chocolatey_api_key: ${{ steps.secrets.outputs.CHOCOLATEY_API_KEY }}
+      committer_token: ${{ steps.secrets.outputs.COMMITTER_TOKEN }}
     steps:
     - name: Fetch secrets from CyberArk Conjur
       id: secrets
@@ -35,7 +36,7 @@ jobs:
         authn_id: inf-github
         account: conjur
         secrets: |
-          data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_P12|MACOS_SIGN_P12;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_PASSWORD|MACOS_SIGN_PASSWORD;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_IDENTITY|MACOS_SIGN_IDENTITY;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_ISSUER_ID|MACOS_NOTARY_ISSUER_ID;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY_ID|MACOS_NOTARY_KEY_ID;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY|MACOS_NOTARY_KEY;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_P12|MACOS_INSTALLER_P12;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_PASSWORD|MACOS_INSTALLER_PASSWORD;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_IDENTITY|MACOS_INSTALLER_IDENTITY;data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD|KEYCHAIN_PASSWORD;data/infamousdevops/ci/github/infamousjoeg/conceal/CHOCOLATEY_API_KEY|CHOCOLATEY_API_KEY
+          data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_P12|MACOS_SIGN_P12;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_PASSWORD|MACOS_SIGN_PASSWORD;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_SIGN_IDENTITY|MACOS_SIGN_IDENTITY;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_ISSUER_ID|MACOS_NOTARY_ISSUER_ID;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY_ID|MACOS_NOTARY_KEY_ID;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_NOTARY_KEY|MACOS_NOTARY_KEY;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_P12|MACOS_INSTALLER_P12;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_PASSWORD|MACOS_INSTALLER_PASSWORD;data/infamousdevops/ci/github/infamousjoeg/conceal/MACOS_INSTALLER_IDENTITY|MACOS_INSTALLER_IDENTITY;data/infamousdevops/ci/github/infamousjoeg/conceal/KEYCHAIN_PASSWORD|KEYCHAIN_PASSWORD;data/infamousdevops/ci/github/infamousjoeg/conceal/CHOCOLATEY_API_KEY|CHOCOLATEY_API_KEY;data/infamousdevops/ci/github/infamousjoeg/conceal/COMMITTER_TOKEN|COMMITTER_TOKEN
 
   release:
     needs: fetch-secrets
@@ -112,7 +113,7 @@ jobs:
         security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
   homebrew-update:
-    needs: release
+    needs: [fetch-secrets, release]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -123,4 +124,4 @@ jobs:
         homebrew-tap: infamousjoeg/homebrew-tap
         base-branch: main
       env:
-        COMMITTER_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
+        COMMITTER_TOKEN: ${{ needs.fetch-secrets.outputs.committer_token }}
