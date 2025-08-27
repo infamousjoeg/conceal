@@ -121,15 +121,16 @@ release:
     ### Manual Installation
     Download the appropriate binary for your platform from the assets above.
 
-brews:
-  - name: conceal
-    repository:
-      owner: infamousjoeg
-      name: homebrew-tap
-    homepage: https://github.com/infamousjoeg/conceal
-    description: Cross-platform secret management using native OS credential stores
-    test: |
-      system "#{bin}/conceal version"
+# Homebrew formula updates handled by separate homebrew-update job using mislav/bump-homebrew-formula-action
+# brews:
+#   - name: conceal
+#     repository:
+#       owner: infamousjoeg
+#       name: homebrew-tap
+#     homepage: https://github.com/infamousjoeg/conceal
+#     description: Cross-platform secret management using native OS credential stores
+#     test: |
+#       system "#{bin}/conceal version"
 
 # Chocolatey packaging disabled - choco executable not available on macOS runners
 # Windows users can download binaries directly from GitHub releases
