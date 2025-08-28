@@ -258,7 +258,8 @@ jobs:
         Write-Output "Chocolatey package created successfully"
 
     - name: Publish to Chocolatey
-      if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key != '' }}
+      # Testing: Always run to verify API key is available
+      # Original: if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key != '' }}
       shell: powershell  
       run: |
         $VERSION = "${{ github.ref_name }}".TrimStart('v')
