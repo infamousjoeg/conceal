@@ -42,7 +42,7 @@ jobs:
     needs: fetch-secrets
     runs-on: macos-latest  # Changed to macOS for code signing and notarization
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -132,7 +132,7 @@ jobs:
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Create Chocolatey package
       shell: powershell
