@@ -126,3 +126,27 @@ jobs:
         formula-path: conceal.rb
       env:
         COMMITTER_TOKEN: ${{ needs.fetch-secrets.outputs.committer_token || secrets.COMMITTER_TOKEN }}
+
+  chocolatey-release:
+    needs: [fetch-secrets, release]
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+
+    - name: Run GoReleaser for Chocolatey only
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --clean --skip=validate --skip=publish --skip=archives --skip=docker
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CHOCOLATEY_API_KEY: ${{ needs.fetch-secrets.outputs.chocolatey_api_key }}

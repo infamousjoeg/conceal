@@ -16,7 +16,15 @@
       "Bash(git add:*)",
       "Bash(git stash:*)",
       "WebFetch(domain:github.com)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh release delete:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(gh release list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh release view:*)"
     ],
     "deny": [],
     "ask": [],
