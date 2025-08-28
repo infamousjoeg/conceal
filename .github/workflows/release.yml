@@ -259,7 +259,7 @@ jobs:
 
     - name: Publish to Chocolatey
       # Use Conjur API key with GitHub Secrets fallback
-      if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key != '' || secrets.CHOCOLATEY_API_KEY != '' }}
+      if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key || secrets.CHOCOLATEY_API_KEY }}
       shell: powershell  
       run: |
         $VERSION = "${{ github.ref_name }}".TrimStart('v')
