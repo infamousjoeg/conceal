@@ -133,20 +133,96 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
+    - name: Create Chocolatey package
+      shell: powershell
+      run: |
+        # Get version from tag (remove 'v' prefix)
+        $VERSION = "${{ github.ref_name }}".TrimStart('v')
+        Write-Output "Creating Chocolatey package for version: $VERSION"
+        
+        # Create chocolatey directory structure
+        New-Item -ItemType Directory -Force -Path "chocolatey/tools"
+        
+        # Get checksum for Windows x64 binary
+        $response = Invoke-WebRequest -Uri "https://github.com/infamousjoeg/conceal/releases/download/v$VERSION/checksums.txt" -UseBasicParsing
+        $checksumLine = ($response.Content -split "`n" | Where-Object { $_ -like "*conceal_Windows_x86_64.zip*" }).Trim()
+        $checksum = ($checksumLine -split "\s+")[0]
+        Write-Output "Checksum: $checksum"
+        
+        # Create nuspec file
+        @"
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+          <metadata>
+            <id>conceal</id>
+            <version>$VERSION</version>
+            <title>Conceal</title>
+            <authors>Joe Garcia</authors>
+            <projectUrl>https://github.com/infamousjoeg/conceal</projectUrl>
+            <licenseUrl>https://github.com/infamousjoeg/conceal/blob/main/LICENSE</licenseUrl>
+            <requireLicenseAcceptance>false</requireLicenseAcceptance>
+            <projectSourceUrl>https://github.com/infamousjoeg/conceal</projectSourceUrl>
+            <docsUrl>https://github.com/infamousjoeg/conceal/blob/main/README.md</docsUrl>
+            <bugTrackerUrl>https://github.com/infamousjoeg/conceal/issues</bugTrackerUrl>
+            <tags>security secrets credential-manager keychain summon cli</tags>
+            <summary>Cross-platform secret management using native OS credential stores</summary>
+            <description>Conceal is a cross-platform secret management tool that integrates with native OS credential stores:
 
-    - name: Run GoReleaser for Chocolatey only
-      uses: goreleaser/goreleaser-action@v6
-      with:
-        distribution: goreleaser
-        version: latest
-        args: release --skip=validate --skip=publish --skip=archive --skip=build --skip=docker
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CHOCOLATEY_API_KEY: ${{ needs.fetch-secrets.outputs.chocolatey_api_key }}
+        - Windows Credential Manager
+        - macOS Keychain
+
+        Features:
+        - Store, retrieve, and manage secrets securely
+        - Full Summon compatibility with "summon/" prefix
+        - Clipboard integration with auto-clear
+        - Cross-platform CLI interface</description>
+            <releaseNotes>https://github.com/infamousjoeg/conceal/releases/tag/v$VERSION</releaseNotes>
+            <copyright>2025 Joe Garcia</copyright>
+          </metadata>
+          <files>
+            <file src="tools\**" target="tools" />
+          </files>
+        </package>
+        "@ | Out-File -FilePath "chocolatey/conceal.nuspec" -Encoding UTF8
+        
+        # Create chocolatey install script
+        @"
+        `$ErrorActionPreference = 'Stop'
+        `$toolsDir = "`$(Split-Path -parent `$MyInvocation.MyCommand.Definition)"
+        `$url64 = 'https://github.com/infamousjoeg/conceal/releases/download/v$VERSION/conceal_Windows_x86_64.zip'
+        
+        `$packageArgs = @{
+          packageName   = 'conceal'
+          unzipLocation = `$toolsDir
+          fileType      = 'ZIP'  
+          url64bit      = `$url64
+          checksum64    = '$checksum'
+          checksumType64 = 'sha256'
+        }
+        
+        Install-ChocolateyZipPackage @packageArgs
+        "@ | Out-File -FilePath "chocolatey/tools/chocolateyinstall.ps1" -Encoding UTF8
+        
+        # Build the package
+        Push-Location chocolatey
+        choco pack conceal.nuspec
+        Pop-Location
+        
+        Write-Output "Chocolatey package created successfully"
+
+    - name: Publish to Chocolatey
+      if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key != '' }}
+      shell: powershell  
+      run: |
+        $VERSION = "${{ github.ref_name }}".TrimStart('v')
+        $apiKey = "${{ needs.fetch-secrets.outputs.chocolatey_api_key }}"
+        
+        if ([string]::IsNullOrEmpty($apiKey)) {
+          Write-Output "CHOCOLATEY_API_KEY is empty, skipping publication"
+          exit 0
+        }
+        
+        Push-Location chocolatey
+        choco push "conceal.$VERSION.nupkg" --source https://push.chocolatey.org/ --api-key $apiKey
+        Pop-Location
