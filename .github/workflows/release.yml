@@ -171,14 +171,9 @@ jobs:
               # Convert byte array to string
               $contentString = [System.Text.Encoding]::UTF8.GetString($response.Content)
               Write-Output ("Successfully downloaded checksums.txt (Length: {0})" -f $contentString.Length)
-              Write-Output "Content preview:"
-              Write-Output $contentString.Substring(0, [Math]::Min(200, $contentString.Length))
               
               $lines = $contentString -split "`n"
-              Write-Output ("Total lines: {0}" -f $lines.Count)
-              
               $checksumLine = $lines | Where-Object { $_ -like "*conceal_Windows_x86_64.zip*" }
-              Write-Output ("Matching lines: {0}" -f ($checksumLine -join ", "))
               
               if ($checksumLine) {
                 $trimmedLine = $checksumLine.Trim()
