@@ -258,12 +258,19 @@ jobs:
         Write-Output "Chocolatey package created successfully"
 
     - name: Publish to Chocolatey
-      # Testing: Always run to verify API key is available
-      # Original: if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key != '' }}
+      # Use Conjur API key with GitHub Secrets fallback
+      if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key != '' || secrets.CHOCOLATEY_API_KEY != '' }}
       shell: powershell  
       run: |
         $VERSION = "${{ github.ref_name }}".TrimStart('v')
+        # Use Conjur API key first, fallback to GitHub Secrets
         $apiKey = "${{ needs.fetch-secrets.outputs.chocolatey_api_key }}"
+        if ([string]::IsNullOrEmpty($apiKey)) {
+          $apiKey = "${{ secrets.CHOCOLATEY_API_KEY }}"
+          Write-Output "Using GitHub Secrets fallback for CHOCOLATEY_API_KEY"
+        } else {
+          Write-Output "Using Conjur-provided CHOCOLATEY_API_KEY"
+        }
         
         if ([string]::IsNullOrEmpty($apiKey)) {
           Write-Output "CHOCOLATEY_API_KEY is empty, skipping publication"
