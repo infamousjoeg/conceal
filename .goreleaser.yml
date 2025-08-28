@@ -147,6 +147,7 @@ chocolateys:
     tags: "security secrets credential-manager keychain summon"
     summary: Cross-platform secret management using native OS credential stores
     goamd64: v1
+    skip_publish: true
     description: |
       Conceal is a cross-platform secret management tool that integrates with native OS credential stores:
       
