@@ -89,7 +89,7 @@ jobs:
       with:
         distribution: goreleaser
         version: latest
-        args: ${{ github.event_name == 'workflow_dispatch' && 'build --snapshot --clean' || 'release --clean --skip=validate --skip=chocolateys' }}
+        args: ${{ github.event_name == 'workflow_dispatch' && 'build --snapshot --clean' || 'release --clean --skip=validate --skip=chocolatey' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Apple Developer Code Signing (from Conjur)
