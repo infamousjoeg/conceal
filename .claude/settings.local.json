@@ -25,7 +25,8 @@
       "Bash(gh release list:*)",
       "Bash(gh pr view:*)",
       "Bash(gh release view:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh secret set:*)"
     ],
     "deny": [],
     "ask": [],
