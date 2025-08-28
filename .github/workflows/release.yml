@@ -168,11 +168,13 @@ jobs:
             $response = Invoke-WebRequest -Uri "https://github.com/infamousjoeg/conceal/releases/download/v$VERSION/checksums.txt" -UseBasicParsing -Headers $headers -MaximumRedirection 5
             
             if ($response -and $response.Content) {
-              Write-Output ("Successfully downloaded checksums.txt (Length: {0})" -f $response.Content.Length)
+              # Convert byte array to string
+              $contentString = [System.Text.Encoding]::UTF8.GetString($response.Content)
+              Write-Output ("Successfully downloaded checksums.txt (Length: {0})" -f $contentString.Length)
               Write-Output "Content preview:"
-              Write-Output $response.Content.Substring(0, [Math]::Min(200, $response.Content.Length))
+              Write-Output $contentString.Substring(0, [Math]::Min(200, $contentString.Length))
               
-              $lines = $response.Content -split "`n"
+              $lines = $contentString -split "`n"
               Write-Output ("Total lines: {0}" -f $lines.Count)
               
               $checksumLine = $lines | Where-Object { $_ -like "*conceal_Windows_x86_64.zip*" }
