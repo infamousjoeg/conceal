@@ -151,7 +151,7 @@ jobs:
         
         for ($i = 1; $i -le $maxRetries; $i++) {
           try {
-            Write-Output "Attempt $i/$maxRetries: Downloading checksums.txt..."
+            Write-Output "Attempt $i of $maxRetries: Downloading checksums.txt..."
             
             # Wait a bit for release assets to be fully propagated
             if ($i -gt 1) {
