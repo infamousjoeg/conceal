@@ -258,8 +258,7 @@ jobs:
         Write-Output "Chocolatey package created successfully"
 
     - name: Publish to Chocolatey
-      # Use Conjur API key with GitHub Secrets fallback
-      if: ${{ needs.fetch-secrets.outputs.chocolatey_api_key || secrets.CHOCOLATEY_API_KEY }}
+      # Always run - fallback logic handles API key availability
       shell: powershell  
       run: |
         $VERSION = "${{ github.ref_name }}".TrimStart('v')
