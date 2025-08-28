@@ -151,11 +151,11 @@ jobs:
         
         for ($i = 1; $i -le $maxRetries; $i++) {
           try {
-            Write-Output "Attempt $i of $maxRetries: Downloading checksums.txt..."
+            Write-Output ("Attempt {0} of {1}: Downloading checksums.txt..." -f $i, $maxRetries)
             
             # Wait a bit for release assets to be fully propagated
             if ($i -gt 1) {
-              Write-Output "Waiting $retryDelay seconds before retry..."
+              Write-Output ("Waiting {0} seconds before retry..." -f $retryDelay)
               Start-Sleep -Seconds $retryDelay
             }
             
@@ -168,12 +168,12 @@ jobs:
             $response = Invoke-WebRequest -Uri "https://github.com/infamousjoeg/conceal/releases/download/v$VERSION/checksums.txt" -UseBasicParsing -Headers $headers -MaximumRedirection 5
             
             if ($response -and $response.Content) {
-              Write-Output "Successfully downloaded checksums.txt (Length: $($response.Content.Length))"
+              Write-Output ("Successfully downloaded checksums.txt (Length: {0})" -f $response.Content.Length)
               $checksumLine = ($response.Content -split "`n" | Where-Object { $_ -like "*conceal_Windows_x86_64.zip*" }).Trim()
               
               if ($checksumLine) {
                 $checksum = ($checksumLine -split "\s+")[0]
-                Write-Output "Found checksum: $checksum"
+                Write-Output ("Found checksum: {0}" -f $checksum)
                 break
               } else {
                 throw "Windows x64 zip not found in checksums file"
@@ -183,9 +183,9 @@ jobs:
             }
           }
           catch {
-            Write-Output "Attempt $i failed: $($_.Exception.Message)"
+            Write-Output ("Attempt {0} failed: {1}" -f $i, $_.Exception.Message)
             if ($i -eq $maxRetries) {
-              Write-Error "Failed to download checksums after $maxRetries attempts"
+              Write-Error ("Failed to download checksums after {0} attempts" -f $maxRetries)
               exit 1
             }
           }
