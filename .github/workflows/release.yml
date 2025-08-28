@@ -169,10 +169,18 @@ jobs:
             
             if ($response -and $response.Content) {
               Write-Output ("Successfully downloaded checksums.txt (Length: {0})" -f $response.Content.Length)
-              $checksumLine = ($response.Content -split "`n" | Where-Object { $_ -like "*conceal_Windows_x86_64.zip*" }).Trim()
+              Write-Output "Content preview:"
+              Write-Output $response.Content.Substring(0, [Math]::Min(200, $response.Content.Length))
+              
+              $lines = $response.Content -split "`n"
+              Write-Output ("Total lines: {0}" -f $lines.Count)
+              
+              $checksumLine = $lines | Where-Object { $_ -like "*conceal_Windows_x86_64.zip*" }
+              Write-Output ("Matching lines: {0}" -f ($checksumLine -join ", "))
               
               if ($checksumLine) {
-                $checksum = ($checksumLine -split "\s+")[0]
+                $trimmedLine = $checksumLine.Trim()
+                $checksum = ($trimmedLine -split "\s+")[0]
                 Write-Output ("Found checksum: {0}" -f $checksum)
                 break
               } else {
