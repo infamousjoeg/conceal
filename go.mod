@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/danieljoos/wincred v1.2.2
-	github.com/keybase/go-keychain v0.0.0-20231219164618-57a3676c3af6
+	github.com/keybase/go-keychain v0.0.1
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/term v0.34.0
 )
