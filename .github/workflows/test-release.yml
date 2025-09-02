@@ -104,8 +104,8 @@ jobs:
       run: |
         echo "Simulating release process without publishing..."
         
-        # Create a fake tag for simulation
-        git tag v4.1.0-test-$(date +%s)
+        # Create a fake tag for simulation (using different version to avoid conflicts)
+        git tag v0.0.0-test-$(date +%s)
         
         # Run GoReleaser in snapshot mode (no publishing)
         goreleaser release --snapshot --skip=publish --clean || echo "Release simulation completed with warnings"

@@ -26,7 +26,12 @@
       "Bash(gh pr view:*)",
       "Bash(gh release view:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(gh secret set:*)"
+      "Bash(gh secret set:*)",
+      "Bash(gh repo view:*)",
+      "Bash(brew:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr comment:*)"
     ],
     "deny": [],
     "ask": [],
