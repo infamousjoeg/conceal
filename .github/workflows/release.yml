@@ -30,7 +30,7 @@ jobs:
     steps:
     - name: Fetch secrets from CyberArk Conjur
       id: secrets
-      uses: cyberark/conjur-action@v2.0.12
+      uses: cyberark/conjur-action@v2.1.0
       with:
         url: https://pineapple.secretsmgr.cyberark.cloud/api
         authn_id: inf-github
