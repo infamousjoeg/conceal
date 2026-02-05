@@ -12,6 +12,7 @@ Conceal is a cross-platform command-line utility that eases the interaction betw
   - [Windows](#windows)
     - [Via Chocolatey (Recommended)](#via-chocolatey-recommended)
     - [Via GitHub Releases](#via-github-releases)
+  - [Linux](#linux)
   - [Manual Installation](#manual-installation)
 - [Usage](#usage)
   - [Add a secret](#add-a-secret)
@@ -56,7 +57,7 @@ Conceal is a cross-platform command-line utility that eases the interaction betw
 |----------|--------------|---------|-------|
 | 🍎 **macOS** | Keychain Access | ✅ Full Support | Native integration via Security Framework |
 | 🪟 **Windows** | Credential Manager | ✅ Full Support | Native integration via Windows API |
-| 🐧 **Linux** | - | ❌ Not Supported | Future consideration for keyring/libsecret |
+| 🐧 **Linux** | Kernel Keyring | ✅ Full Support | Native integration via keyctl syscalls |
 
 ## Requirements
 
@@ -89,12 +90,33 @@ choco install conceal
 2. Extract `conceal.exe` to a folder in your PATH (e.g., `C:\Program Files\Conceal\`)
 3. Open Command Prompt or PowerShell and verify: `conceal version`
 
+### Linux
+
+Download the latest release from [GitHub Releases](https://github.com/infamousjoeg/conceal/releases/latest):
+
+```bash
+# Download (choose your architecture)
+curl -LO https://github.com/infamousjoeg/conceal/releases/latest/download/conceal_Linux_x86_64.tar.gz
+
+# Extract
+tar -xzf conceal_Linux_x86_64.tar.gz
+
+# Move to PATH
+sudo mv conceal /usr/local/bin/
+
+# Verify
+conceal version
+```
+
+> **Note:** Linux support uses the kernel keyring (keyctl). Secrets are stored in your user keyring and persist for your login session. For headless/server environments, ensure you have a proper login session (not just SSH).
+
 ### Manual Installation
 
 #### All Platforms
 1. Download the appropriate binary for your platform from [GitHub Releases](https://github.com/infamousjoeg/conceal/releases/latest):
    - **macOS**: `conceal_Darwin_x86_64.tar.gz` (Intel) or `conceal_Darwin_arm64.tar.gz` (Apple Silicon)
-   - **Windows**: `conceal_Windows_x86_64.zip` 
+   - **Windows**: `conceal_Windows_x86_64.zip`
+   - **Linux**: `conceal_Linux_x86_64.tar.gz` or `conceal_Linux_arm64.tar.gz`
 2. Extract and move the executable to a directory in your `PATH`
 3. Verify installation: `conceal version`
 
