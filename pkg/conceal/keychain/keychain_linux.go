@@ -25,9 +25,9 @@ type QueryResult struct {
 }
 
 var (
-	keyringAvailable     bool
-	keyringChecked       bool
-	keyringCheckMu       sync.Mutex
+	keyringAvailable       bool
+	keyringChecked         bool
+	keyringCheckMu         sync.Mutex
 	errKeyringNotAvailable = fmt.Errorf("linux kernel keyring is not available in this environment")
 )
 
