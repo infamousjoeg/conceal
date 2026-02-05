@@ -6,6 +6,7 @@ package keychain
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
@@ -23,8 +24,60 @@ type QueryResult struct {
 	Account string
 }
 
+var (
+	keyringAvailable     bool
+	keyringChecked       bool
+	keyringCheckMu       sync.Mutex
+	errKeyringNotAvailable = fmt.Errorf("linux kernel keyring is not available in this environment")
+)
+
+// checkKeyringAvailable tests if the Linux kernel keyring is functional
+// by attempting to add, find, and remove a test key
+func checkKeyringAvailable() bool {
+	keyringCheckMu.Lock()
+	defer keyringCheckMu.Unlock()
+
+	if keyringChecked {
+		return keyringAvailable
+	}
+	keyringChecked = true
+
+	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
+	if err != nil {
+		keyringAvailable = false
+		return false
+	}
+
+	// Try to add a test key
+	testDesc := keyDescPrefix + "_conceal_test_"
+	testData := []byte("test")
+	keyID, err := unix.AddKey("user", testDesc, testData, keyring)
+	if err != nil {
+		keyringAvailable = false
+		return false
+	}
+
+	// Try to find it
+	foundID, err := unix.KeyctlSearch(keyring, "user", testDesc, 0)
+	if err != nil || foundID != keyID {
+		// Clean up if possible
+		_, _ = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
+		keyringAvailable = false
+		return false
+	}
+
+	// Clean up the test key
+	_, _ = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
+
+	keyringAvailable = true
+	return true
+}
+
 // getSessionKeyring returns the user's session keyring ID
 func getSessionKeyring() (int, error) {
+	if !checkKeyringAvailable() {
+		return 0, errKeyringNotAvailable
+	}
 	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get user keyring: %w", err)
@@ -39,7 +92,10 @@ func keyDescription(secretID string) string {
 
 // SecretExists checks if a secret exists in the Linux kernel keyring
 func SecretExists(secretID string) bool {
-	keyring, err := getSessionKeyring()
+	if !checkKeyringAvailable() {
+		return false
+	}
+	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
 	if err != nil {
 		return false
 	}
@@ -51,7 +107,10 @@ func SecretExists(secretID string) bool {
 
 // ListSecrets returns all secrets in the keyring with the summon prefix
 func ListSecrets() []QueryResult {
-	keyring, err := getSessionKeyring()
+	if !checkKeyringAvailable() {
+		return []QueryResult{}
+	}
+	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
 	if err != nil {
 		return []QueryResult{}
 	}
@@ -107,6 +166,9 @@ func ListSecrets() []QueryResult {
 
 // AddSecret adds a secret to the Linux kernel keyring
 func AddSecret(secretID string, secret []byte) error {
+	if !checkKeyringAvailable() {
+		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
+	}
 	if SecretExists(secretID) {
 		return fmt.Errorf("secret %s already exists in keyring, please use `conceal update` instead", secretID)
 	}
@@ -132,6 +194,9 @@ func AddSecret(secretID string, secret []byte) error {
 
 // DeleteSecret removes a secret from the Linux kernel keyring
 func DeleteSecret(secretID string) error {
+	if !checkKeyringAvailable() {
+		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
+	}
 	keyring, err := getSessionKeyring()
 	if err != nil {
 		return err
@@ -158,6 +223,9 @@ func DeleteSecret(secretID string) error {
 
 // GetSecret retrieves a secret and delivers it via clipboard or stdout
 func GetSecret(secretID string, delivery string) error {
+	if !checkKeyringAvailable() {
+		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
+	}
 	keyring, err := getSessionKeyring()
 	if err != nil {
 		return err
@@ -195,6 +263,9 @@ func GetSecret(secretID string, delivery string) error {
 
 // UpdateSecret updates an existing secret in the Linux kernel keyring
 func UpdateSecret(secretID string, secret []byte) error {
+	if !checkKeyringAvailable() {
+		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
+	}
 	keyring, err := getSessionKeyring()
 	if err != nil {
 		return err
