@@ -9,7 +9,7 @@ import (
 // isSupported returns true if the current platform supports secret management
 func isSupported() bool {
 	platform := runtime.GOOS
-	return platform == "darwin" || platform == "windows"
+	return platform == "darwin" || platform == "windows" || platform == "linux"
 }
 
 func TestAddSecret(t *testing.T) {

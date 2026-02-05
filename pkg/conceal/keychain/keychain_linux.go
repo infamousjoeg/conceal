@@ -71,7 +71,7 @@ func ListSecrets() []QueryResult {
 	}
 
 	// Parse key IDs (4 bytes each, little endian)
-	var results []QueryResult
+	results := []QueryResult{}
 	for i := 0; i+4 <= len(buf); i += 4 {
 		keyID := int(*(*int32)(unsafe.Pointer(&buf[i])))
 		if keyID == 0 {
@@ -108,7 +108,7 @@ func ListSecrets() []QueryResult {
 // AddSecret adds a secret to the Linux kernel keyring
 func AddSecret(secretID string, secret []byte) error {
 	if SecretExists(secretID) {
-		return fmt.Errorf("Secret %s already exists in keyring. Please use `conceal update` instead.", secretID)
+		return fmt.Errorf("secret %s already exists in keyring, please use `conceal update` instead", secretID)
 	}
 
 	keyring, err := getSessionKeyring()
@@ -119,12 +119,12 @@ func AddSecret(secretID string, secret []byte) error {
 	desc := keyDescription(secretID)
 	_, err = unix.AddKey("user", desc, secret, keyring)
 	if err != nil {
-		return fmt.Errorf("Failed to add secret %s to keyring: %w", secretID, err)
+		return fmt.Errorf("failed to add secret %s to keyring: %w", secretID, err)
 	}
 
 	// Verify the secret was added
 	if !SecretExists(secretID) {
-		return fmt.Errorf("Secret %s was set but is not found in keyring.", secretID)
+		return fmt.Errorf("secret %s was set but is not found in keyring", secretID)
 	}
 
 	return nil
@@ -140,7 +140,7 @@ func DeleteSecret(secretID string) error {
 	desc := keyDescription(secretID)
 	keyID, err := unix.KeyctlSearch(keyring, "user", desc, 0)
 	if err != nil {
-		return fmt.Errorf("Secret '%s' not found in keyring.", secretID)
+		return fmt.Errorf("secret '%s' not found in keyring", secretID)
 	}
 
 	// Invalidate/unlink the key
@@ -149,7 +149,7 @@ func DeleteSecret(secretID string) error {
 		// Fallback to unlink if invalidate not supported
 		_, err = unix.KeyctlInt(unix.KEYCTL_UNLINK, keyID, keyring, 0, 0)
 		if err != nil {
-			return fmt.Errorf("Failed to delete secret '%s' from keyring: %w", secretID, err)
+			return fmt.Errorf("failed to delete secret '%s' from keyring: %w", secretID, err)
 		}
 	}
 
@@ -166,29 +166,29 @@ func GetSecret(secretID string, delivery string) error {
 	desc := keyDescription(secretID)
 	keyID, err := unix.KeyctlSearch(keyring, "user", desc, 0)
 	if err != nil {
-		return fmt.Errorf("Secret '%s' not found in keyring.", secretID)
+		return fmt.Errorf("secret '%s' not found in keyring", secretID)
 	}
 
 	// Get the secret data size first
 	size, err := unix.KeyctlBuffer(unix.KEYCTL_READ, keyID, nil, 0)
 	if err != nil {
-		return fmt.Errorf("Failed to read secret '%s' from keyring: %w", secretID, err)
+		return fmt.Errorf("failed to read secret '%s' from keyring: %w", secretID, err)
 	}
 
 	// Read the secret data
 	buf := make([]byte, size)
 	_, err = unix.KeyctlBuffer(unix.KEYCTL_READ, keyID, buf, 0)
 	if err != nil {
-		return fmt.Errorf("Failed to read secret '%s' from keyring: %w", secretID, err)
+		return fmt.Errorf("failed to read secret '%s' from keyring: %w", secretID, err)
 	}
 
 	password := string(buf)
-	if delivery == "clipboard" {
+	switch delivery {
+	case "clipboard":
 		clipboard.Secret(password)
-	} else if delivery == "stdout" {
+	case "stdout":
 		fmt.Printf("%s", password)
 	}
-	password = ""
 
 	return nil
 }
@@ -203,28 +203,26 @@ func UpdateSecret(secretID string, secret []byte) error {
 	desc := keyDescription(secretID)
 	keyID, err := unix.KeyctlSearch(keyring, "user", desc, 0)
 	if err != nil {
-		return fmt.Errorf("Secret %s does not exist in keyring. Please use `conceal set` instead.", secretID)
+		return fmt.Errorf("secret %s does not exist in keyring, please use `conceal set` instead", secretID)
 	}
 
 	// Update the key payload
-	err = unix.KeyctlSetperm(keyID, 0x3f3f0000) // Ensure we have write permission
-	if err != nil {
-		// Non-fatal, try to update anyway
-	}
+	// Ensure we have write permission (ignore error, try anyway)
+	_ = unix.KeyctlSetperm(keyID, 0x3f3f0000)
 
 	// Linux keyring doesn't have a direct update; we delete and re-add
 	_, err = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
 	if err != nil {
 		_, err = unix.KeyctlInt(unix.KEYCTL_UNLINK, keyID, keyring, 0, 0)
 		if err != nil {
-			return fmt.Errorf("Failed to update secret '%s': could not remove old value: %w", secretID, err)
+			return fmt.Errorf("failed to update secret '%s': could not remove old value: %w", secretID, err)
 		}
 	}
 
 	// Add the new value
 	_, err = unix.AddKey("user", desc, secret, keyring)
 	if err != nil {
-		return fmt.Errorf("Failed to update secret %s in keyring: %w", secretID, err)
+		return fmt.Errorf("failed to update secret %s in keyring: %w", secretID, err)
 	}
 
 	return nil
