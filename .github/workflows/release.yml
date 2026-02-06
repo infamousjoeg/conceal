@@ -117,15 +117,77 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-    - name: Update Homebrew formula
-      uses: mislav/bump-homebrew-formula-action@v3
+    - name: Checkout homebrew-tap
+      uses: actions/checkout@v5
       with:
-        formula-name: conceal
-        homebrew-tap: infamousjoeg/homebrew-tap
-        base-branch: master
-        formula-path: conceal.rb
+        repository: infamousjoeg/homebrew-tap
+        token: ${{ needs.fetch-secrets.outputs.committer_token || secrets.COMMITTER_TOKEN }}
+        ref: master
+
+    - name: Update conceal formula
       env:
-        COMMITTER_TOKEN: ${{ needs.fetch-secrets.outputs.committer_token || secrets.COMMITTER_TOKEN }}
+        VERSION: ${{ github.ref_name }}
+      run: |
+        # Strip 'v' prefix for version
+        VER="${VERSION#v}"
+        
+        # Download checksums with retry
+        for i in 1 2 3; do
+          curl -sL "https://github.com/infamousjoeg/conceal/releases/download/${VERSION}/checksums.txt" -o checksums.txt && break
+          echo "Retry $i..."
+          sleep 5
+        done
+        
+        # Extract SHA256 for Darwin builds
+        SHA_ARM64=$(grep "conceal_Darwin_arm64.tar.gz" checksums.txt | awk '{print $1}')
+        SHA_X86_64=$(grep "conceal_Darwin_x86_64.tar.gz" checksums.txt | awk '{print $1}')
+        
+        if [ -z "$SHA_ARM64" ] || [ -z "$SHA_X86_64" ]; then
+          echo "Failed to extract checksums"
+          cat checksums.txt
+          exit 1
+        fi
+        
+        echo "ARM64 SHA256: $SHA_ARM64"
+        echo "x86_64 SHA256: $SHA_X86_64"
+        
+        # Generate formula
+        cat > conceal.rb << EOF
+class Conceal < Formula
+  desc "Cross-platform secret management using native OS credential stores"
+  homepage "https://github.com/infamousjoeg/conceal"
+  version "${VER}"
+
+  on_macos do
+    if Hardware::CPU.arm?
+      url "https://github.com/infamousjoeg/conceal/releases/download/${VERSION}/conceal_Darwin_arm64.tar.gz"
+      sha256 "${SHA_ARM64}"
+    else
+      url "https://github.com/infamousjoeg/conceal/releases/download/${VERSION}/conceal_Darwin_x86_64.tar.gz"
+      sha256 "${SHA_X86_64}"
+    end
+
+    def install
+      bin.install "conceal"
+    end
+  end
+
+  test do
+    system "#{bin}/conceal", "version"
+  end
+end
+EOF
+        
+        echo "Generated formula:"
+        cat conceal.rb
+
+    - name: Commit and push
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add conceal.rb
+        git diff --staged --quiet || git commit -m "conceal ${VERSION#v}"
+        git push
 
   chocolatey-release:
     needs: [fetch-secrets, release]
