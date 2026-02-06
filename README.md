@@ -69,6 +69,11 @@ Conceal is a cross-platform command-line utility that eases the interaction betw
 * Windows 10 or later
 * Windows Server 2016 or later
 
+### Linux
+* Linux kernel 2.6+ (for keyctl support)
+* User session with access to kernel keyring
+* Note: Secrets persist for your login session; for headless environments, ensure proper PAM session setup
+
 ## Installation
 
 ### Homebrew (macOS)
@@ -400,8 +405,9 @@ Conceal is built with Go and uses platform-specific build tags to provide native
 ```
 pkg/conceal/
 ├── keychain/
-│   ├── keychain_darwin.go     # macOS implementation
-│   ├── keychain_windows.go    # Windows implementation  
+│   ├── keychain_darwin.go     # macOS Keychain implementation
+│   ├── keychain_linux.go      # Linux kernel keyring implementation
+│   ├── keychain_windows.go    # Windows Credential Manager wrapper
 │   └── keychain_other.go      # Unsupported platforms
 └── wincred/
     ├── wincred_windows.go     # Windows Credential Manager API
