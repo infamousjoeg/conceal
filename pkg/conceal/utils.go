@@ -48,7 +48,7 @@ func GetSecretName(args []string) string {
 func CheckPlatformSupport() {
 	platform := GetPlatform()
 	if !IsSupported() {
-		PrintError("Secret management is not supported on %s. Only macOS and Windows are currently supported.", platform)
+		PrintError("Secret management is not supported on %s. Only macOS, Windows, and Linux are currently supported.", platform)
 	}
 }
 
@@ -60,5 +60,5 @@ func GetPlatform() string {
 // IsSupported checks if the current platform supports secret management
 func IsSupported() bool {
 	platform := GetPlatform()
-	return platform == "darwin" || platform == "windows"
+	return platform == "darwin" || platform == "windows" || platform == "linux"
 }

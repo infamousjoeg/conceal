@@ -100,7 +100,7 @@ release:
     ### Supported Platforms:
     - macOS (Keychain)
     - Windows (Credential Manager) 
-    - Linux (not supported in this version)
+    - Linux (Kernel Keyring)
     
   footer: |
     **Full Changelog**: https://github.com/infamousjoeg/conceal/compare/{{ .PreviousTag }}...{{ .Tag }}
@@ -152,6 +152,7 @@ chocolateys:
       
       - Windows Credential Manager
       - macOS Keychain
+      - Linux Kernel Keyring
       
       Features:
       - Store, retrieve, and manage secrets securely

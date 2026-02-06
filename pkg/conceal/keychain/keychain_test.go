@@ -9,7 +9,21 @@ import (
 // isSupported returns true if the current platform supports secret management
 func isSupported() bool {
 	platform := runtime.GOOS
-	return platform == "darwin" || platform == "windows"
+	return platform == "darwin" || platform == "windows" || platform == "linux"
+}
+
+// isRuntimeAvailable checks if the backend is actually functional
+// This handles cases like Linux in containers where keyring isn't available
+func isRuntimeAvailable() bool {
+	// Try a simple operation to see if the backend works
+	err := AddSecret("_test_availability_check_", []byte("test"))
+	if err != nil {
+		// If error contains "not supported", runtime isn't available
+		return !strings.Contains(err.Error(), "not supported")
+	}
+	// Clean up
+	_ = DeleteSecret("_test_availability_check_")
+	return true
 }
 
 func TestAddSecret(t *testing.T) {
@@ -23,6 +37,11 @@ func TestAddSecret(t *testing.T) {
 			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
 		}
 		return
+	}
+
+	// Check runtime availability (e.g., Linux in containers)
+	if !isRuntimeAvailable() {
+		t.Skip("Skipping: secret backend not available in this environment")
 	}
 
 	// Test case where secret does not exist
@@ -49,6 +68,11 @@ func TestSecretExists(t *testing.T) {
 			t.Errorf("Expected SecretExists to return false on unsupported platform, but got true")
 		}
 		return
+	}
+
+	// Check runtime availability
+	if !isRuntimeAvailable() {
+		t.Skip("Skipping: secret backend not available in this environment")
 	}
 
 	// Add a test secret first
@@ -78,6 +102,11 @@ func TestListSecrets(t *testing.T) {
 			t.Errorf("Expected ListSecrets to return empty list on unsupported platform, but got %d secrets", len(secrets))
 		}
 		return
+	}
+
+	// Check runtime availability
+	if !isRuntimeAvailable() {
+		t.Skip("Skipping: secret backend not available in this environment")
 	}
 
 	// Add a test secret first
@@ -114,6 +143,11 @@ func TestGetSecret(t *testing.T) {
 		return
 	}
 
+	// Check runtime availability
+	if !isRuntimeAvailable() {
+		t.Skip("Skipping: secret backend not available in this environment")
+	}
+
 	// Add a test secret first
 	_ = AddSecret("test_secret_get", []byte("password1"))
 
@@ -146,6 +180,11 @@ func TestUpdateSecret(t *testing.T) {
 		return
 	}
 
+	// Check runtime availability
+	if !isRuntimeAvailable() {
+		t.Skip("Skipping: secret backend not available in this environment")
+	}
+
 	// Add a test secret first
 	_ = AddSecret("test_secret_update", []byte("password1"))
 
@@ -176,6 +215,11 @@ func TestDeleteSecret(t *testing.T) {
 			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
 		}
 		return
+	}
+
+	// Check runtime availability
+	if !isRuntimeAvailable() {
+		t.Skip("Skipping: secret backend not available in this environment")
 	}
 
 	// Add a test secret first
