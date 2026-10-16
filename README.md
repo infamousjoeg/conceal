@@ -141,6 +141,13 @@ go build -o conceal .
 
 To add a secret to your OS credential store, call `conceal` and use the `set` command to pass the account name to add. You will be immediately prompted to provide a secret value in a secure manner or you can provide it via STDIN.
 
+> [!WARNING]
+> Make sure shell history is disabled when running these commands. Shell history is saved in plaintext, so a malicious actor, or an AI coding agent with file system or shell access, can mine it for any secrets you've typed.
+>
+> - **Bash:** `set +o history`
+> - **Zsh:** `fc -p`
+> - **PowerShell:** `Set-PSReadLineOption -HistorySaveStyle SaveNothing`
+
 **Platform-specific behavior:**
 - **macOS**: Stores in Keychain Access with service "summon"
 - **Windows**: Stores in Credential Manager under "Generic Credentials" with target "summon/{secret_name}"

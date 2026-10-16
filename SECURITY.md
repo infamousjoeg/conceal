@@ -102,6 +102,7 @@ We appreciate security researchers who report vulnerabilities responsibly. Pleas
 3. **Access Control**: Limit who has access to your credential stores
 4. **Regular Audits**: Periodically review stored secrets with `conceal list`
 5. **Backup Strategy**: Ensure your OS credential store is backed up securely
+6. **Shell History**: Make sure shell history is disabled when running `conceal set` or `conceal update` (see [Add a secret](README.md#add-a-secret))
 
 ### For Developers
 
