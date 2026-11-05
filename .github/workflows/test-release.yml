@@ -53,7 +53,9 @@ jobs:
               "conceal_Windows_arm64.zip": ("windows", 0xAA64),
           }
           required = {
-              "README.md", "LICENSE", "docs/actions.md", "docs/playground.html",
+              "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md",
+              "docs/actions.md", "docs/getting-started.md", "docs/reference.md",
+              "docs/playground.html",
               "examples/github-contract.json", "examples/list-issues.json",
               "examples/draft-pull-request.json",
           }

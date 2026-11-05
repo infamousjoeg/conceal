@@ -17,11 +17,12 @@ When contributing to this repository, please first discuss the change you wish t
 
 ### Prerequisites
 
-- **Go**: Version 1.21 or later
+- **Go**: Version 1.26 or later; release builds use Go 1.27.3
 - **Git**: For version control
 - **Platform Access**: 
-  - macOS with Xcode Command Line Tools (for Keychain testing)
+  - macOS 13+ with Xcode Command Line Tools and CGO (for release builds and Keychain testing)
   - Windows 10+ (for Credential Manager testing)
+  - Linux with user keyrings enabled (for native lifecycle testing)
 
 ## Development Environment
 
@@ -55,7 +56,7 @@ Conceal supports multiple platforms with platform-specific implementations:
 ### Supported Platforms
 - **macOS**: Full support via Keychain Access
 - **Windows**: Full support via Credential Manager
-- **Linux**: Not currently supported
+- **Linux**: Kernel user keyring; values are held in memory and do not survive reboot
 
 ### Build Tags
 
@@ -68,8 +69,9 @@ We use Go build tags to separate platform-specific code:
 //go:build darwin  
 // +build darwin
 
-//go:build !darwin && !windows
-// +build !darwin,!windows
+//go:build linux
+
+//go:build !darwin && !windows && !linux
 ```
 
 ### Testing Cross-Platform Code
@@ -79,10 +81,12 @@ We use Go build tags to separate platform-specific code:
 # Test current platform
 go test ./...
 
-# Cross-compile (build only, won't run)
+# Cross-compile from a POSIX shell (build only, won't run)
 GOOS=windows GOARCH=amd64 go build .
-GOOS=darwin GOARCH=amd64 go build .
+GOOS=linux GOARCH=arm64 go build .
 ```
+
+macOS builds use the Security framework and require a macOS host with CGO. PowerShell users can set `$env:GOOS` and `$env:GOARCH` for cross-compilation and remove those overrides before running native tests.
 
 #### CI/CD Testing
 Our GitHub Actions automatically test on:
@@ -101,6 +105,8 @@ Our GitHub Actions automatically test on:
    ```go
    func SecretExists(secretID string) bool
    func ListSecrets() []QueryResult
+   func List() ([]QueryResult, error)
+   func ReadSecret(secretID string) ([]byte, error)
    func AddSecret(secretID string, secret []byte) error
    func DeleteSecret(secretID string) error
    func GetSecret(secretID string, delivery string) error
@@ -132,19 +138,9 @@ go test -coverprofile=coverage.out ./...
 
 ### Platform-Specific Testing
 
-**macOS Testing:**
-- Tests use actual Keychain Access APIs
-- Requires user permission for keychain access
-- Cannot fully automate in CI (requires user interaction)
+Normal unit tests use synthetic stores and do not touch the native credential store or clipboard. To opt in to native credential lifecycle tests, set `CONCEAL_INTEGRATION=1` before running `go test ./...`. In PowerShell use `$env:CONCEAL_INTEGRATION = '1'`; in a POSIX shell use `CONCEAL_INTEGRATION=1 go test ./...`.
 
-**Windows Testing:**
-- Tests use actual Credential Manager APIs  
-- Requires Windows environment
-- Cannot fully automate in CI (requires user interaction)
-
-**Cross-Platform Testing:**
-- Interface compatibility tests run on all platforms
-- Build verification tests ensure compilation succeeds
+Native tests create random entries and remove them. They fail if the selected backend is unavailable, including Linux containers that deny `keyctl`. CI runs native tests on macOS, Windows, and Linux, alongside Go 1.26/1.27 unit tests. Race detection requires a supported C compiler. See the [release checks](docs/reference.md#development-and-release-checks) for packaging coverage.
 
 ### Adding Tests
 

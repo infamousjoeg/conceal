@@ -1,8 +1,69 @@
-# Action contracts and exact approvals
+# Review a GitHub action before it runs
 
-Conceal's action adapter lets an agent request a specific operation without receiving the credential used to perform it. A contract limits the repositories and operations. An approval authorizes one exact request for a short period. Conceal checks both before retrieving the credential and dispatching the API request.
+[Back to Conceal](../README.md) · [Install the candidate](getting-started.md#install-the-release-candidate) · [Interactive playground](playground.html)
 
-Explore the behavior in the [playground](playground.html). It is a simulation, requires no credentials, and makes no network requests.
+An agent has prepared a fix and wants to open a draft pull request. Conceal lets you review that specific request, then use your stored GitHub token to send it once. The token stays inside Conceal; the result can be passed back to the agent.
+
+**The branch must already be pushed.** Conceal opens the draft PR; it does not create a branch, commit code, or push changes. It can also list one page of issues.
+
+Today this is an **operator-mediated CLI workflow**. You run the commands in a trusted environment and review what the agent proposes. This candidate does not include an agent connector, MCP server, or sandbox. Before giving an untrusted agent direct access, you must supply the [separate execution boundary](#the-trust-boundary) described below.
+
+Two terms used in the CLI:
+
+- A **contract** is a JSON file naming which repositories and operations are allowed.
+- An **approval** gives one exact request permission to run before a deadline. A changed request needs a new proposal and review.
+
+## Try it without a token
+
+Start with the [playground](playground.html) if you want to see a successful run without installing anything. This CLI exercise shows preparation, review, approval, and revocation. It deliberately stops short of sending a GitHub request.
+
+You need [Conceal 4.3](getting-started.md#install-the-release-candidate). Run these commands from the repository root or extracted candidate directory, which contains `examples/`. Leave the example's `OWNER/REPOSITORY` placeholder unchanged for this exercise.
+
+### 1. Prepare a request
+
+```sh
+conceal action --state-dir ./conceal-demo-state validate examples/github-contract.json
+conceal action --state-dir ./conceal-demo-state prepare --contract examples/github-contract.json --operation github.issues.list --repo OWNER/REPOSITORY --input examples/list-issues.json
+```
+
+Success prints JSON rather than a success banner. Validation prints the accepted contract. Preparation prints a `request` object containing an `id` and generated GitHub GET request, with a `digest` alongside it. No token is retrieved and no API call occurs. Accepting the placeholder checks the contract's structure, not whether a repository exists or your account can access it.
+
+### 2. Inspect it and try running before approval
+
+Copy the `id` inside the preparation output's `request` object. In each command below, replace `REQUEST_ID` with that value; it is not a literal argument.
+
+```sh
+conceal action --state-dir ./conceal-demo-state inspect REQUEST_ID
+conceal action --state-dir ./conceal-demo-state execute REQUEST_ID
+```
+
+Inspect the repository, operation, query parameters, and complete generated request. Execution should fail with `request requires approval` and a nonzero exit status. That is the expected result.
+
+### 3. Approve what you inspected, then revoke it
+
+Copy the `digest` from your trusted `inspect` output. Replace `REVIEWED_SHA256` with that entire value:
+
+```sh
+conceal action --state-dir ./conceal-demo-state approve REQUEST_ID --digest REVIEWED_SHA256
+conceal action --state-dir ./conceal-demo-state revoke REQUEST_ID
+conceal action --state-dir ./conceal-demo-state execute REQUEST_ID
+```
+
+Approval prints its creation and expiry times. Revocation prints a receipt with `"outcome": "revoked"`. The final execution should fail with `approval already consumed or revoked`. You have exercised the lifecycle without storing or reading a token.
+
+Keep the revoke step in this exercise: executing an approved, unrevoked request would attempt credential lookup and potentially a real API call. The local `conceal-demo-state` directory contains the demo requests and receipts. You can delete this exercise's directory when finished.
+
+## Make a real request
+
+First read [the trust boundary](#the-trust-boundary). In your trusted operator context:
+
+1. [Create a contract](#create-a-contract) with your real repository and the smallest permissions needed.
+2. Store a suitable token with `conceal set github/token`.
+3. [Prepare and inspect a request](#prepare-review-approve-execute). For a draft PR, edit `examples/draft-pull-request.json` with the title, body, already pushed `head` branch, and destination `base` branch.
+4. Approve the digest you inspected, then execute. This step makes a real GitHub request and can create a draft PR.
+5. Inspect the result before passing it to the agent; repository responses may contain private data.
+
+The rest of this guide covers supported operations, deployment, and failure handling.
 
 ## What ships in this candidate
 
@@ -51,14 +112,7 @@ The fields are:
 
 Use a GitHub fine-grained token with the smallest repository scope and permissions the selected actions require. Issue reads typically need Issues read permission for private repositories; draft creation needs Pull requests write permission. Organization policies and token type may impose additional requirements. See GitHub's [issues](https://docs.github.com/en/rest/issues/issues#list-repository-issues) and [pull requests](https://docs.github.com/en/rest/pulls/pulls#create-a-pull-request) endpoint documentation.
 
-Store the token through the hidden terminal prompt:
-
-```sh
-conceal set github/token
-conceal action validate examples/github-contract.json
-```
-
-Contract validation and request preparation do not retrieve the token. The token must be available when executing. Approval binds its secret reference, not its current value, so authorized credential rotation does not require rewriting the contract.
+Store the token through the hidden terminal prompt with `conceal set github/token`. Contract validation and request preparation do not retrieve the token. The token must be available when executing. Approval binds its secret reference, not its current value, so authorized credential rotation does not require rewriting the contract.
 
 ## Prepare, review, approve, execute
 
