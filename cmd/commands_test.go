@@ -265,6 +265,11 @@ func TestRunChild(t *testing.T) {
 	if os.Getenv("CONCEAL_FIXTURE_CHILD") != "yes" {
 		return
 	}
+	// os.Exit runs coverage hooks even when --clean-env removes GOCOVERDIR.
+	// Keep helper coverage in a directory owned and cleaned by the parent test.
+	if err := os.Setenv("GOCOVERDIR", os.Args[len(os.Args)-2]); err != nil {
+		os.Exit(2)
+	}
 	mode := os.Args[len(os.Args)-1]
 	switch mode {
 	case "output":
@@ -306,7 +311,7 @@ func TestRunScopesSecretsAndRedactsOutput(t *testing.T) {
 			if unmasked {
 				args = append(args, "--no-redact")
 			}
-			args = append(args, "--", executable, "-test.run=^TestRunChild$", "--", "output")
+			args = append(args, "--", executable, "-test.run=^TestRunChild$", "--", t.TempDir(), "output")
 			out, stderr, err := execute(t, store, strings.NewReader("input-forwarded"), args...)
 			if err != nil {
 				t.Fatal(err)
@@ -340,7 +345,7 @@ func TestRunExitAndTimeout(t *testing.T) {
 		{"exit", "0", 7}, {"wait", "100ms", 124},
 	} {
 		store := &memoryStore{values: map[string][]byte{"child-mode": []byte("yes")}}
-		_, _, err := execute(t, store, strings.NewReader(""), "run", "--timeout", test.timeout, "--env", "CONCEAL_FIXTURE_CHILD=child-mode", "--", executable, "-test.run=^TestRunChild$", "--", test.mode)
+		_, _, err := execute(t, store, strings.NewReader(""), "run", "--timeout", test.timeout, "--env", "CONCEAL_FIXTURE_CHILD=child-mode", "--", executable, "-test.run=^TestRunChild$", "--", t.TempDir(), test.mode)
 		if statusCode(err) != test.code {
 			t.Fatalf("%s status=%d want=%d, err=%v", test.mode, statusCode(err), test.code, err)
 		}
@@ -381,7 +386,7 @@ func TestCancelledRun(t *testing.T) {
 	root.SetOut(io.Discard)
 	root.SetErr(io.Discard)
 	root.SetIn(strings.NewReader(""))
-	root.SetArgs([]string{"run", "--env", "CONCEAL_FIXTURE_CHILD=fixture", "--", executable, "-test.run=^TestRunChild$", "--", "wait"})
+	root.SetArgs([]string{"run", "--env", "CONCEAL_FIXTURE_CHILD=fixture", "--", executable, "-test.run=^TestRunChild$", "--", t.TempDir(), "wait"})
 	if statusCode(root.Execute()) != 130 {
 		t.Fatal("cancelled run did not propagate interruption")
 	}
