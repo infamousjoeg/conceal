@@ -2,71 +2,114 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-
-	"github.com/infamousjoeg/conceal/pkg/conceal"
 	"github.com/spf13/cobra"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
 )
 
-var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Install Summon provider wrapper",
-	Long: `This command creates a wrapper script for using Conceal as a Summon provider.
-    
-    Example Usage:
-    $ conceal summon install`,
-	Run: func(cmd *cobra.Command, args []string) {
-		installWrapper()
-	},
+func defaultProviderDirectory() string {
+	if path := os.Getenv("SUMMON_PROVIDER_PATH"); path != "" {
+		return path
+	}
+	if runtime.GOOS == "windows" {
+		base := os.Getenv("ProgramW6432")
+		if base == "" {
+			base = os.Getenv("ProgramFiles")
+		}
+		if base == "" {
+			base = `C:\Program Files`
+		}
+		return filepath.Join(base, "Cyberark Conjur", "Summon", "Providers")
+	}
+	return "/usr/local/lib/summon"
 }
 
-func installWrapper() {
-	// Define the script content
-	scriptContent := `#!/bin/bash
-
-    # Check if the correct number of arguments are provided
-    if [ "$#" -ne 1 ]; then
-        echo "Usage: $0 <secret-id>"
-        exit 1
-    fi
-
-    # Call the conceal binary with the get argument and the provided secret ID
-    conceal summon show "$1"
-    `
-
-	// Find the full path of the summon executable
-	summonPath, err := exec.LookPath("summon")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding Summon: %v\n", err)
-		conceal.PrintInfo("Make sure Summon is installed and available in your PATH.")
-		os.Exit(1)
+func newInstallCommand() *cobra.Command {
+	command := &cobra.Command{Use: "install", Short: "Install a native Summon provider executable", Args: cobra.NoArgs}
+	command.Flags().String("dir", "", "Provider directory (default: SUMMON_PROVIDER_PATH or Summon's standard directory)")
+	command.Flags().Bool("force", false, "Replace an existing regular provider file")
+	command.RunE = func(cmd *cobra.Command, _ []string) error {
+		directory, _ := cmd.Flags().GetString("dir")
+		if directory == "" {
+			directory = defaultProviderDirectory()
+		}
+		force, _ := cmd.Flags().GetBool("force")
+		source, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		name := "conceal_summon"
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		target, err := installProvider(source, directory, name, force)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Provider installed: %s\nSet Summon's --provider option to this path.\n", target)
+		return err
 	}
-
-	// Get the directory where the summon executable is located
-	summonDir := filepath.Dir(summonPath)
-	providersPath := filepath.Join(summonDir, "Providers")
-	scriptFilePath := filepath.Join(providersPath, "conceal_summon")
-
-	// Create the Providers directory
-	err = os.MkdirAll(providersPath, 0755)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating Providers directory: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Write the script content to the file
-	err = os.WriteFile(scriptFilePath, []byte(scriptContent), 0755)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating wrapper script: %v\n", err)
-		os.Exit(1)
-	}
-
-	conceal.PrintSuccess("Wrapper script 'conceal_summon' created successfully.")
-	conceal.PrintInfo("To use: summon --provider conceal_summon ...")
+	return command
 }
 
-func init() {
-	summonCmd.AddCommand(installCmd)
+func installProvider(source, directory, name string, force bool) (string, error) {
+	directory, err := filepath.Abs(directory)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(directory, 0755); err != nil {
+		return "", fmt.Errorf("create provider directory (use --dir for a writable location): %w", err)
+	}
+	target := filepath.Join(directory, name)
+	input, err := os.Open(source)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = input.Close() }()
+	sourceInfo, err := input.Stat()
+	if err != nil {
+		return "", err
+	}
+	if existing, statErr := os.Lstat(target); statErr == nil {
+		if !force {
+			return "", fmt.Errorf("provider already exists at %s; use --force to replace it", target)
+		}
+		if !existing.Mode().IsRegular() || os.SameFile(sourceInfo, existing) {
+			return "", fmt.Errorf("refusing to replace a non-regular file or the running executable")
+		}
+	} else if !os.IsNotExist(statErr) {
+		return "", statErr
+	}
+	output, err := os.CreateTemp(directory, ".conceal-provider-*")
+	if err != nil {
+		return "", err
+	}
+	temp := output.Name()
+	defer func() { _ = os.Remove(temp) }()
+	_, copyErr := io.Copy(output, input)
+	if copyErr == nil {
+		copyErr = output.Chmod(0755)
+	}
+	if copyErr == nil {
+		copyErr = output.Sync()
+	}
+	closeErr := output.Close()
+	if copyErr != nil {
+		return "", copyErr
+	}
+	if closeErr != nil {
+		return "", closeErr
+	}
+	if force {
+		err = os.Rename(temp, target)
+	} else {
+		// A same-directory hard link installs without overwriting a concurrent file.
+		err = os.Link(temp, target)
+	}
+	if err != nil {
+		return "", fmt.Errorf("install provider: %w", err)
+	}
+	return target, nil
 }

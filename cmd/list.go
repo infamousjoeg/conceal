@@ -1,49 +1,51 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-
-	"github.com/infamousjoeg/conceal/pkg/conceal"
 	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
+	"sort"
 )
 
-// listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:     "list",
-	Aliases: []string{"ls"},
-	Short:   "List all concealed secret names",
-	Long: `Returns a list of conceal set secret names from the secret provider.
-	
-	Example Usage:
-	$ conceal list`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// List all secrets in keychain with service label `summon`
-		accounts := keychain.ListSecrets()
-
-		conceal.PrintInfo("The following Summon/Conceal accounts are in keychain:")
-
-		uniqueAccounts := make(map[string]bool)
-		for _, account := range accounts {
-			value := account.Account
-			if !uniqueAccounts[value] {
-				uniqueAccounts[value] = true
-				fmt.Println(account.Account)
-			}
+func sortedSecrets(store secretStore) ([]keychain.QueryResult, error) {
+	items, err := store.List()
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	result := []keychain.QueryResult{}
+	for _, item := range items {
+		if !seen[item.Account] {
+			result = append(result, item)
+			seen[item.Account] = true
 		}
-	},
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Account < result[j].Account })
+	return result, nil
 }
 
-func init() {
-	rootCmd.AddCommand(listCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+func newListCommand(store secretStore) *cobra.Command {
+	command := &cobra.Command{Use: "list", Aliases: []string{"ls"}, Short: "List secret names without exposing values", Args: cobra.NoArgs}
+	command.Flags().Bool("json", false, "Emit versioned JSON metadata for tools and agents")
+	command.RunE = func(cmd *cobra.Command, _ []string) error {
+		items, err := sortedSecrets(store)
+		if err != nil {
+			return err
+		}
+		asJSON, _ := cmd.Flags().GetBool("json")
+		if asJSON {
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(struct {
+				SchemaVersion int                    `json:"schema_version"`
+				Secrets       []keychain.QueryResult `json:"secrets"`
+			}{1, items})
+		}
+		for _, item := range items {
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), item.Account); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return command
 }

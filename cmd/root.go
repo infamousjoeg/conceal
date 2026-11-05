@@ -1,79 +1,81 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/infamousjoeg/conceal/pkg/conceal"
+	"github.com/infamousjoeg/conceal/pkg/conceal/keychain"
 	"github.com/spf13/cobra"
 )
 
-var cfgFile string
-
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "conceal",
-	Short: "Conceal is a command-line utility that eases the interaction between developer and OS secret providers.",
-	Long: `Conceal is a command-line utility that eases the interaction between 
-developer and OS secret providers, like MacOS Keychain and Windows Credential Manager. 
-It is the open-source companion to Summon as every secret added using this tool is 
-added using Summon-compliant formatting.
-	
-	Example Usages:
-	$ conceal set app/secret
-	$ conceal unset app/secret
-	$ conceal update app/secret
-	$ conceal get app/secret
-	$ conceal list
-	$ conceal summon install
-	$ conceal summon show app/secret`,
+type secretStore interface {
+	List() ([]keychain.QueryResult, error)
+	ReadSecret(string) ([]byte, error)
+	AddSecret(string, []byte) error
+	UpdateSecret(string, []byte) error
+	DeleteSecret(string) error
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+type nativeStore struct{}
+
+func (nativeStore) List() ([]keychain.QueryResult, error)   { return keychain.List() }
+func (nativeStore) ReadSecret(id string) ([]byte, error)    { return keychain.ReadSecret(id) }
+func (nativeStore) AddSecret(id string, value []byte) error { return keychain.AddSecret(id, value) }
+func (nativeStore) UpdateSecret(id string, value []byte) error {
+	return keychain.UpdateSecret(id, value)
+}
+func (nativeStore) DeleteSecret(id string) error { return keychain.DeleteSecret(id) }
+
+type statusError struct {
+	code    int
+	message string
+}
+
+func (e *statusError) Error() string { return e.message }
+
+func newRootCommand(store secretStore) *cobra.Command {
+	root := &cobra.Command{
+		Use: "conceal", Short: "Manage local secrets for applications and agents",
+		Long:          "Store secrets in macOS Keychain, Windows Credential Manager, or the Linux kernel keyring.\nRun applications with selected secrets, check agent requirements, or integrate with Summon.",
+		SilenceErrors: true, SilenceUsage: true,
+	}
+	root.PersistentFlags().Bool("non-interactive", false, "Fail instead of prompting for input")
+	root.AddCommand(newSetCommand(store), newUpdateCommand(store), newGetCommand(store), newListCommand(store), newUnsetCommand(store), newRunCommand(store), newCheckCommand(store), newActionCommand(store), newSummonCommand(store), newVersionCommand())
+	return root
+}
+
+// Execute runs the CLI, or the single-argument Summon protocol when installed as
+// conceal_summon. The provider is the same native binary, without a shell wrapper.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	var err error
+	name := strings.TrimSuffix(strings.ToLower(filepath.Base(os.Args[0])), ".exe")
+	if name == "conceal_summon" {
+		err = executeProvider(nativeStore{}, os.Args[1:], os.Stdout)
+	} else {
+		err = newRootCommand(nativeStore{}).Execute()
+	}
+	if err != nil {
+		code := 1
+		var status *statusError
+		if errors.As(err, &status) {
+			code = status.code
+		}
+		if err.Error() != "" {
+			fmt.Fprintln(os.Stderr, "conceal:", err)
+		}
+		os.Exit(code)
 	}
 }
 
-func init() {
-	// cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.conceal.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	// Joe note: This would be good to allow multiple secret providers
+func validateSecretName(name string) error {
+	if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "\x00\r\n") {
+		return fmt.Errorf("secret name must be nonempty and contain no NUL or newline characters")
+	}
+	return nil
 }
 
-// initConfig reads in config file and ENV variables if set.
-// func initConfig() {
-// 	if cfgFile != "" {
-// 		// Use config file from the flag.
-// 		viper.SetConfigFile(cfgFile)
-// 	} else {
-// 		// Find home directory.
-// 		home, err := homedir.Dir()
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			os.Exit(1)
-// 		}
-
-// 		// Search config in home directory with name ".conceal" (without extension).
-// 		viper.AddConfigPath(home)
-// 		viper.SetConfigName(".conceal")
-// 	}
-
-// 	viper.AutomaticEnv() // read in environment variables that match
-
-// 	// If a config file is found, read it in.
-// 	if err := viper.ReadInConfig(); err == nil {
-// 		fmt.Println("Using config file:", viper.ConfigFileUsed())
-// 	}
-// }
+func versionString() string { return conceal.FullVersionName }
