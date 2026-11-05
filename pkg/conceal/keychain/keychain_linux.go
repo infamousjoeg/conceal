@@ -7,32 +7,50 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/sys/unix"
+	"runtime"
 	"strings"
 )
 
 const keyDescPrefix = "summon:"
 
-func userKeyring() (int, error) {
+func userKeyring() (int, func(), error) {
+	// Possession grants access to user keys. Service sessions may not link the
+	// user's keyring automatically, so attach it to this thread's keyring.
+	// Linux keyring credentials belong to an OS thread; keep all subsequent
+	// syscalls on that thread until the caller releases it.
+	runtime.LockOSThread()
+	release := runtime.UnlockOSThread
 	id, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
 	if err != nil {
-		return 0, fmt.Errorf("user keyring unavailable on Linux (check session permissions and container restrictions): %w", err)
+		return 0, release, fmt.Errorf("user keyring unavailable on Linux (check session permissions and container restrictions): %w", err)
 	}
-	return id, nil
+	thread, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_THREAD_KEYRING, true)
+	if err == nil {
+		_, err = unix.KeyctlInt(unix.KEYCTL_LINK, id, thread, 0, 0)
+	}
+	if err != nil {
+		return 0, release, fmt.Errorf("attach user keyring to current thread: %w", err)
+	}
+	return id, release, nil
 }
 
-func findKey(id string) (int, error) {
-	ring, err := userKeyring()
+func findKey(id string) (int, func(), error) {
+	ring, release, err := userKeyring()
 	if err != nil {
-		return 0, err
+		return 0, release, err
 	}
 	key, err := unix.KeyctlSearch(ring, "user", keyDescPrefix+id, 0)
 	if err != nil {
-		return 0, fmt.Errorf("find secret %q: %w", id, err)
+		return 0, release, fmt.Errorf("find secret %q: %w", id, err)
 	}
-	return key, nil
+	return key, release, nil
 }
 
-func secretExists(id string) bool { _, err := findKey(id); return err == nil }
+func secretExists(id string) bool {
+	_, release, err := findKey(id)
+	defer release()
+	return err == nil
+}
 
 // readKeyringBuffer retries when the kernel reports that a concurrently changed
 // keyring or payload no longer fits the supplied buffer.
@@ -52,7 +70,8 @@ func readKeyringBuffer(command, id int) ([]byte, error) {
 }
 
 func listSecrets() ([]QueryResult, error) {
-	ring, err := userKeyring()
+	ring, release, err := userKeyring()
+	defer release()
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +98,8 @@ func listSecrets() ([]QueryResult, error) {
 }
 
 func addSecret(id string, value []byte) error {
-	ring, err := userKeyring()
+	ring, release, err := userKeyring()
+	defer release()
 	if err != nil {
 		return err
 	}
@@ -98,7 +118,8 @@ func addSecret(id string, value []byte) error {
 }
 
 func deleteSecret(id string) error {
-	key, err := findKey(id)
+	key, release, err := findKey(id)
+	defer release()
 	if err != nil {
 		return err
 	}
@@ -110,7 +131,8 @@ func deleteSecret(id string) error {
 }
 
 func readSecret(id string) ([]byte, error) {
-	key, err := findKey(id)
+	key, release, err := findKey(id)
+	defer release()
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +144,8 @@ func readSecret(id string) ([]byte, error) {
 }
 
 func updateSecret(id string, value []byte) error {
-	key, err := findKey(id)
+	key, release, err := findKey(id)
+	defer release()
 	if err != nil {
 		return err
 	}
