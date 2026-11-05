@@ -86,6 +86,17 @@ jobs:
               else:
                   assert data[:4] == b"\xcf\xfa\xed\xfe", name
                   actual = struct.unpack_from("<I", data, 4)[0]
+                  offset = 32
+                  deployment_targets = []
+                  for _ in range(struct.unpack_from("<I", data, 16)[0]):
+                      command, size = struct.unpack_from("<II", data, offset)
+                      if command in (0x24, 0x32):  # LC_VERSION_MIN_MACOSX / LC_BUILD_VERSION
+                          field = offset + (12 if command == 0x32 else 8)
+                          minimum = struct.unpack_from("<I", data, field)[0]
+                          deployment_targets.append(minimum)
+                      offset += size
+                  assert deployment_targets, (name, "missing macOS deployment target")
+                  assert max(deployment_targets) <= 13 << 16, (name, deployment_targets)
               assert actual == machine, (name, actual, machine)
               if system == "darwin" and platform.machine() in name:
                   with tempfile.TemporaryDirectory() as directory:

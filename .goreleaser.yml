@@ -16,7 +16,7 @@ builds:
       - -X github.com/infamousjoeg/conceal/pkg/conceal.Tag=
     binary: conceal
   - id: darwin
-    env: [CGO_ENABLED=1]
+    env: [CGO_ENABLED=1, MACOSX_DEPLOYMENT_TARGET=13.0]
     goos: [darwin]
     goarch: [amd64, arm64]
     flags: [-trimpath]
