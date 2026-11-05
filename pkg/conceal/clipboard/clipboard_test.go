@@ -1,72 +1,71 @@
 package clipboard
 
 import (
-	"os"
+	"context"
+	"errors"
 	"testing"
 	"time"
-
-	"github.com/atotto/clipboard"
 )
 
-func TestSecret(t *testing.T) {
-	// Save the current clipboard content
-	originalContent, _ := clipboard.ReadAll()
-
-	// Set up a mock clipboard
-	mockClipboard := ""
-
-	// Replace the clipboard.WriteAll function with a mock implementation
-	clipObject := clipboard.WriteAll
-	clipObject = func(text string) error {
-		mockClipboard = text
-		return nil
+func TestCopySecret(t *testing.T) {
+	for _, test := range []struct {
+		name, newer                                          string
+		cancel, writeError, readError, clearError, wantError bool
+	}{
+		{name: "expires"},
+		{name: "preserves newer clipboard", newer: "copied later"},
+		{name: "clears on cancellation", cancel: true, wantError: true},
+		{name: "copy failure", writeError: true, wantError: true},
+		{name: "read failure", readError: true, wantError: true},
+		{name: "clear failure", clearError: true, wantError: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			current := ""
+			var writes []string
+			read := func() (string, error) {
+				if test.readError {
+					return "", errors.New("read failed")
+				}
+				if test.newer != "" {
+					current = test.newer
+				}
+				return current, nil
+			}
+			write := func(value string) error {
+				writes = append(writes, value)
+				if test.writeError || (value == "" && test.clearError) {
+					return errors.New("write failed")
+				}
+				current = value
+				if test.cancel {
+					cancel()
+				}
+				return nil
+			}
+			err := copySecret(ctx, "test secret", time.Millisecond, read, write)
+			if (err != nil) != test.wantError {
+				t.Fatalf("error = %v", err)
+			}
+			if len(writes) == 0 || writes[0] != "test secret" {
+				t.Fatalf("secret was not copied: %q", writes)
+			}
+			if test.newer != "" && (current != test.newer || len(writes) != 1) {
+				t.Fatal("overwrote newer clipboard content")
+			}
+			if !test.writeError && !test.readError && !test.clearError && test.newer == "" && current != "" {
+				t.Fatal("secret was not cleared")
+			}
+		})
 	}
-
-	// Call the Secret function with a secret message
-	secret := "This is a secret message"
-	go Secret(secret)
-
-	// Wait for 15 seconds
-	time.Sleep(15 * time.Second)
-
-	// Check if the clipboard was cleared after 15 seconds
-	if mockClipboard != "" {
-		t.Errorf("Expected clipboard to be cleared, but got: %s", mockClipboard)
-	}
-
-	// Restore the original clipboard content
-	clipObject(originalContent)
 }
 
-func TestSetupCloseHandler(t *testing.T) {
-	// Save the current clipboard content
-	originalContent, _ := clipboard.ReadAll()
-
-	// Set up a mock clipboard
-	mockClipboard := ""
-
-	// Replace the clipboard.WriteAll function with a mock implementation
-	clipObject := clipboard.WriteAll
-	clipObject = func(text string) error {
-		mockClipboard = text
-		return nil
+func TestCancelledCopyDoesNotTouchClipboard(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := copySecret(ctx, "secret", time.Hour, nil, func(string) error { t.Fatal("wrote after cancellation"); return nil })
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v", err)
 	}
-
-	// Call the SetupCloseHandler function
-	SetupCloseHandler()
-
-	// Send an interrupt signal to the program
-	signalChan := make(chan os.Signal, 1)
-	signalChan <- os.Interrupt
-
-	// Wait for a short time to allow the goroutine to handle the signal
-	time.Sleep(100 * time.Millisecond)
-
-	// Check if the clipboard was cleared after receiving the interrupt signal
-	if mockClipboard != "" {
-		t.Errorf("Expected clipboard to be cleared, but got: %s", mockClipboard)
-	}
-
-	// Restore the original clipboard content
-	clipObject(originalContent)
 }

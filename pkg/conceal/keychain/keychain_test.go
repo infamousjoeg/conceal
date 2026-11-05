@@ -1,260 +1,118 @@
 package keychain
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
 )
 
-// isSupported returns true if the current platform supports secret management
-func isSupported() bool {
-	platform := runtime.GOOS
-	return platform == "darwin" || platform == "windows" || platform == "linux"
-}
-
-// isRuntimeAvailable checks if the backend is actually functional
-// This handles cases like Linux in containers where keyring isn't available
-func isRuntimeAvailable() bool {
-	// Try a simple operation to see if the backend works
-	err := AddSecret("_test_availability_check_", []byte("test"))
+// Native tests are explicit because they write to the operating system's store.
+// They fail, rather than skip, when an opted-in backend is unavailable.
+func TestNativeSecretLifecycle(t *testing.T) {
+	if os.Getenv("CONCEAL_INTEGRATION") != "1" {
+		t.Skip("set CONCEAL_INTEGRATION=1 to test the native credential store")
+	}
+	entropy := make([]byte, 16)
+	if _, err := rand.Read(entropy); err != nil {
+		t.Fatal(err)
+	}
+	id := "conceal-integration/" + hex.EncodeToString(entropy)
+	// A long account exercises dynamically sized Linux key descriptions.
+	id += "/" + strings.Repeat("x", 300)
+	if SecretExists(id) {
+		t.Fatal("unexpected integration name collision")
+	}
+	original := []byte("fixture-only\x00value\nwith whitespace \n")
+	if err := AddSecret(id, original); err != nil {
+		t.Fatalf("native add: %v", err)
+	}
+	t.Cleanup(func() { _ = DeleteSecret(id) })
+	if !SecretExists(id) {
+		t.Fatal("new secret does not exist")
+	}
+	assertValue := func(want []byte) {
+		t.Helper()
+		actual, err := ReadSecret(id)
+		if err != nil {
+			t.Fatalf("native read: %v", err)
+		}
+		defer clear(actual)
+		if !bytes.Equal(actual, want) {
+			t.Fatal("stored bytes differ from input")
+		}
+	}
+	assertValue(original)
+	if err := AddSecret(id, []byte("replacement")); err == nil {
+		t.Fatal("duplicate add succeeded")
+	}
+	assertValue(original)
+	items, err := List()
 	if err != nil {
-		// If error contains "not supported", runtime isn't available
-		return !strings.Contains(err.Error(), "not supported")
+		t.Fatalf("native list: %v", err)
 	}
-	// Clean up
-	_ = DeleteSecret("_test_availability_check_")
-	return true
-}
-
-func TestAddSecret(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, operations should return errors
-		err := AddSecret("secret1", []byte("password1"))
-		if err == nil {
-			t.Errorf("Expected AddSecret to return error on unsupported platform, but got nil")
+	found := 0
+	for _, item := range items {
+		if item.Account == id {
+			found++
 		}
-		if !strings.Contains(err.Error(), "not supported") {
-			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
+	}
+	if found != 1 {
+		t.Fatalf("own integration entry appears %d times", found)
+	}
+	updated := []byte("updated fixture\r\n")
+	if err := UpdateSecret(id, updated); err != nil {
+		t.Fatalf("native update: %v", err)
+	}
+	assertValue(updated)
+	if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
+		if err := UpdateSecret(id, bytes.Repeat([]byte("x"), 1024*1024)); err == nil {
+			t.Fatal("oversized update unexpectedly succeeded")
 		}
-		return
+		assertValue(updated)
 	}
-
-	// Check runtime availability (e.g., Linux in containers)
-	if !isRuntimeAvailable() {
-		t.Skip("Skipping: secret backend not available in this environment")
+	if err := DeleteSecret(id); err != nil {
+		t.Fatalf("native delete: %v", err)
 	}
-
-	// Test case where secret does not exist
-	err := AddSecret("test_secret_add", []byte("password1"))
-	if err != nil {
-		t.Errorf("Expected AddSecret to return nil error, but got: %v", err)
+	if SecretExists(id) {
+		t.Fatal("deleted secret still exists")
 	}
-
-	// Test case where secret already exists
-	err = AddSecret("test_secret_add", []byte("password1"))
-	if err == nil {
-		t.Errorf("Expected AddSecret to return non-nil error, but got nil")
+	if _, err := ReadSecret(id); err == nil {
+		t.Fatal("read of missing secret succeeded")
 	}
-
-	// Cleanup
-	_ = DeleteSecret("test_secret_add")
-}
-
-func TestSecretExists(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, secrets don't exist
-		exists := SecretExists("secret1")
-		if exists {
-			t.Errorf("Expected SecretExists to return false on unsupported platform, but got true")
-		}
-		return
+	if err := UpdateSecret(id, original); err == nil {
+		t.Fatal("update created a missing secret")
 	}
-
-	// Check runtime availability
-	if !isRuntimeAvailable() {
-		t.Skip("Skipping: secret backend not available in this environment")
-	}
-
-	// Add a test secret first
-	_ = AddSecret("test_secret_exists", []byte("password1"))
-
-	// Test case where secret exists
-	exists := SecretExists("test_secret_exists")
-	if !exists {
-		t.Errorf("Expected SecretExists to return true, but got false")
-	}
-
-	// Test case where secret does not exist
-	exists = SecretExists("non_existent_secret")
-	if exists {
-		t.Errorf("Expected SecretExists to return false, but got true")
-	}
-
-	// Cleanup
-	_ = DeleteSecret("test_secret_exists")
-}
-
-func TestListSecrets(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, list should be empty
-		secrets := ListSecrets()
-		if len(secrets) != 0 {
-			t.Errorf("Expected ListSecrets to return empty list on unsupported platform, but got %d secrets", len(secrets))
-		}
-		return
-	}
-
-	// Check runtime availability
-	if !isRuntimeAvailable() {
-		t.Skip("Skipping: secret backend not available in this environment")
-	}
-
-	// Add a test secret first
-	_ = AddSecret("test_secret_list", []byte("password1"))
-
-	// Test case where secrets exist
-	secrets := ListSecrets()
-	if len(secrets) == 0 {
-		t.Errorf("Expected ListSecrets to return non-empty list, but got empty list")
-	}
-
-	// Cleanup
-	_ = DeleteSecret("test_secret_list")
-}
-
-func TestGetSecret(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, operations should return errors
-		err := GetSecret("secret1", "clipboard")
-		if err == nil {
-			t.Errorf("Expected GetSecret to return error on unsupported platform, but got nil")
-		}
-		if !strings.Contains(err.Error(), "not supported") {
-			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
-		}
-
-		err = GetSecret("secret1", "stdout")
-		if err == nil {
-			t.Errorf("Expected GetSecret to return error on unsupported platform, but got nil")
-		}
-		if !strings.Contains(err.Error(), "not supported") {
-			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
-		}
-		return
-	}
-
-	// Check runtime availability
-	if !isRuntimeAvailable() {
-		t.Skip("Skipping: secret backend not available in this environment")
-	}
-
-	// Add a test secret first
-	_ = AddSecret("test_secret_get", []byte("password1"))
-
-	// Test case where secret exists and delivery is stdout (safer for CI)
-	err := GetSecret("test_secret_get", "stdout")
-	if err != nil {
-		t.Errorf("Expected GetSecret to return nil error, but got: %v", err)
-	}
-
-	// Test case where secret does not exist and delivery is stdout
-	err = GetSecret("non_existent_secret", "stdout")
-	if err == nil {
-		t.Errorf("Expected GetSecret to return non-nil error, but got nil")
-	}
-
-	// Cleanup
-	_ = DeleteSecret("test_secret_get")
-}
-
-func TestUpdateSecret(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, operations should return errors
-		err := UpdateSecret("secret1", []byte("newpassword"))
-		if err == nil {
-			t.Errorf("Expected UpdateSecret to return error on unsupported platform, but got nil")
-		}
-		if !strings.Contains(err.Error(), "not supported") {
-			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
-		}
-		return
-	}
-
-	// Check runtime availability
-	if !isRuntimeAvailable() {
-		t.Skip("Skipping: secret backend not available in this environment")
-	}
-
-	// Add a test secret first
-	_ = AddSecret("test_secret_update", []byte("password1"))
-
-	// Test case where secret exists
-	err := UpdateSecret("test_secret_update", []byte("newpassword"))
-	if err != nil {
-		t.Errorf("Expected UpdateSecret to return nil error, but got: %v", err)
-	}
-
-	// Test case where secret does not exist
-	err = UpdateSecret("non_existent_secret", []byte("password3"))
-	if err == nil {
-		t.Errorf("Expected UpdateSecret to return non-nil error, but got nil")
-	}
-
-	// Cleanup
-	_ = DeleteSecret("test_secret_update")
-}
-
-func TestDeleteSecret(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, operations should return errors
-		err := DeleteSecret("secret1")
-		if err == nil {
-			t.Errorf("Expected DeleteSecret to return error on unsupported platform, but got nil")
-		}
-		if !strings.Contains(err.Error(), "not supported") {
-			t.Errorf("Expected error message to contain 'not supported', but got: %v", err)
-		}
-		return
-	}
-
-	// Check runtime availability
-	if !isRuntimeAvailable() {
-		t.Skip("Skipping: secret backend not available in this environment")
-	}
-
-	// Add a test secret first
-	_ = AddSecret("test_secret_delete", []byte("password1"))
-
-	// Test case where secret exists
-	err := DeleteSecret("test_secret_delete")
-	if err != nil {
-		t.Errorf("Expected DeleteSecret to return nil error, but got: %v", err)
-	}
-
-	// Test case where secret does not exist
-	err = DeleteSecret("non_existent_secret")
-	if err == nil {
-		t.Errorf("Expected DeleteSecret to return non-nil error, but got nil")
+	if err := DeleteSecret(id); err == nil {
+		t.Fatal("delete of missing secret succeeded")
 	}
 }
 
-func TestListSecretsNone(t *testing.T) {
-	if !isSupported() {
-		// On unsupported platforms, list should be empty
-		secrets := ListSecrets()
-		if len(secrets) != 0 {
-			t.Errorf("Expected ListSecrets to return empty list on unsupported platform, but got %d secrets", len(secrets))
-		}
-		return
+func TestInvalidDelivery(t *testing.T) {
+	if err := GetSecret("not-accessed", "invalid"); err == nil {
+		t.Fatal("unsupported delivery accepted")
 	}
+}
 
-	// Test case where we can call ListSecrets successfully
-	// Note: We can't assume the keychain is empty, so we just check that the function works
-	secrets := ListSecrets()
-	// The function should always return a slice (empty or with items), never nil
-	if secrets == nil {
-		t.Errorf("Expected ListSecrets to return non-nil slice, but got nil")
+func TestInvalidNamesNeverReachNativeStore(t *testing.T) {
+	for _, id := range []string{"", "  ", "bad\nname", "bad\rname", "bad\x00name"} {
+		if SecretExists(id) {
+			t.Errorf("invalid name %q exists", id)
+		}
+		if err := AddSecret(id, []byte("fixture")); err == nil {
+			t.Errorf("invalid add %q succeeded", id)
+		}
+		if err := UpdateSecret(id, []byte("fixture")); err == nil {
+			t.Errorf("invalid update %q succeeded", id)
+		}
+		if err := DeleteSecret(id); err == nil {
+			t.Errorf("invalid delete %q succeeded", id)
+		}
+		if _, err := ReadSecret(id); err == nil {
+			t.Errorf("invalid read %q succeeded", id)
+		}
 	}
-	// The slice should be valid (this tests the function doesn't panic)
-	_ = len(secrets)
 }

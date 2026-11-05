@@ -1,300 +1,135 @@
 //go:build linux
-// +build linux
 
 package keychain
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
-	"strings"
-	"sync"
-	"unsafe"
-
-	"github.com/infamousjoeg/conceal/pkg/conceal/clipboard"
 	"golang.org/x/sys/unix"
+	"strings"
 )
 
-// Linux kernel keyring constants
-const (
-	keyringService = "summon"
-	keyDescPrefix  = "summon:"
-)
+const keyDescPrefix = "summon:"
 
-// QueryResult represents a query result for cross-platform compatibility
-type QueryResult struct {
-	Account string
+func userKeyring() (int, error) {
+	id, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
+	if err != nil {
+		return 0, fmt.Errorf("user keyring unavailable on Linux (check session permissions and container restrictions): %w", err)
+	}
+	return id, nil
 }
 
-var (
-	keyringAvailable       bool
-	keyringChecked         bool
-	keyringCheckMu         sync.Mutex
-	errKeyringNotAvailable = fmt.Errorf("linux kernel keyring is not available in this environment")
-)
-
-// checkKeyringAvailable tests if the Linux kernel keyring is functional
-// by attempting to add, find, and remove a test key
-func checkKeyringAvailable() bool {
-	keyringCheckMu.Lock()
-	defer keyringCheckMu.Unlock()
-
-	if keyringChecked {
-		return keyringAvailable
-	}
-	keyringChecked = true
-
-	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
+func findKey(id string) (int, error) {
+	ring, err := userKeyring()
 	if err != nil {
-		keyringAvailable = false
-		return false
+		return 0, err
 	}
-
-	// Try to add a test key
-	testDesc := keyDescPrefix + "_conceal_test_"
-	testData := []byte("test")
-	keyID, err := unix.AddKey("user", testDesc, testData, keyring)
+	key, err := unix.KeyctlSearch(ring, "user", keyDescPrefix+id, 0)
 	if err != nil {
-		keyringAvailable = false
-		return false
+		return 0, fmt.Errorf("find secret %q: %w", id, err)
 	}
-
-	// Try to find it
-	foundID, err := unix.KeyctlSearch(keyring, "user", testDesc, 0)
-	if err != nil || foundID != keyID {
-		// Clean up if possible
-		_, _ = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
-		keyringAvailable = false
-		return false
-	}
-
-	// Clean up the test key
-	_, _ = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
-
-	keyringAvailable = true
-	return true
+	return key, nil
 }
 
-// getSessionKeyring returns the user's session keyring ID
-func getSessionKeyring() (int, error) {
-	if !checkKeyringAvailable() {
-		return 0, errKeyringNotAvailable
+func secretExists(id string) bool { _, err := findKey(id); return err == nil }
+
+// readKeyringBuffer retries when the kernel reports that a concurrently changed
+// keyring or payload no longer fits the supplied buffer.
+func readKeyringBuffer(command, id int) ([]byte, error) {
+	var buffer []byte
+	for attempt := 0; attempt < 8; attempt++ {
+		n, err := unix.KeyctlBuffer(command, id, buffer, 0)
+		if err != nil {
+			return nil, err
+		}
+		if n <= len(buffer) {
+			return buffer[:n], nil
+		}
+		buffer = make([]byte, n)
 	}
-	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get user keyring: %w", err)
-	}
-	return keyring, nil
+	return nil, errors.New("keyring changed repeatedly while reading; retry the operation")
 }
 
-// keyDescription builds the key description from secretID
-func keyDescription(secretID string) string {
-	return keyDescPrefix + secretID
-}
-
-// SecretExists checks if a secret exists in the Linux kernel keyring
-func SecretExists(secretID string) bool {
-	if !checkKeyringAvailable() {
-		return false
-	}
-	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
+func listSecrets() ([]QueryResult, error) {
+	ring, err := userKeyring()
 	if err != nil {
-		return false
+		return nil, err
 	}
-
-	desc := keyDescription(secretID)
-	_, err = unix.KeyctlSearch(keyring, "user", desc, 0)
-	return err == nil
-}
-
-// ListSecrets returns all secrets in the keyring with the summon prefix
-func ListSecrets() []QueryResult {
-	if !checkKeyringAvailable() {
-		return []QueryResult{}
-	}
-	keyring, err := unix.KeyctlGetKeyringID(unix.KEY_SPEC_USER_KEYRING, true)
+	data, err := readKeyringBuffer(unix.KEYCTL_READ, ring)
 	if err != nil {
-		return []QueryResult{}
+		return nil, fmt.Errorf("list keyring: %w", err)
 	}
-
-	// Read all key IDs from the keyring
-	// First call with nil buffer to get size
-	size, err := unix.KeyctlBuffer(unix.KEYCTL_READ, keyring, nil, 0)
-	if err != nil || size == 0 {
-		return []QueryResult{}
-	}
-
-	// Allocate buffer and read key IDs
-	buf := make([]byte, size)
-	_, err = unix.KeyctlBuffer(unix.KEYCTL_READ, keyring, buf, 0)
-	if err != nil {
-		return []QueryResult{}
-	}
-
-	// Parse key IDs (4 bytes each, little endian)
 	results := []QueryResult{}
-	for i := 0; i+4 <= len(buf); i += 4 {
-		keyID := int(*(*int32)(unsafe.Pointer(&buf[i])))
-		if keyID == 0 {
+	for i := 0; i+4 <= len(data); i += 4 {
+		id := int(int32(binary.NativeEndian.Uint32(data[i : i+4])))
+		description, err := unix.KeyctlString(unix.KEYCTL_DESCRIBE, id)
+		if errors.Is(err, unix.ENOKEY) || errors.Is(err, unix.EKEYREVOKED) || errors.Is(err, unix.EKEYEXPIRED) {
 			continue
 		}
-
-		// Get key description
-		descBuf := make([]byte, 256)
-		n, err := unix.KeyctlBuffer(unix.KEYCTL_DESCRIBE, keyID, descBuf, 0)
-		if err != nil || n == 0 {
-			continue
-		}
-
-		// Description format: "type;uid;gid;perm;description"
-		desc := string(descBuf[:n-1]) // trim null terminator
-		parts := strings.SplitN(desc, ";", 5)
-		if len(parts) < 5 {
-			continue
-		}
-
-		keyType := parts[0]
-		keyDesc := parts[4]
-
-		// Only include user keys with our prefix
-		if keyType == "user" && strings.HasPrefix(keyDesc, keyDescPrefix) {
-			secretID := strings.TrimPrefix(keyDesc, keyDescPrefix)
-			results = append(results, QueryResult{Account: secretID})
-		}
-	}
-
-	return results
-}
-
-// AddSecret adds a secret to the Linux kernel keyring
-func AddSecret(secretID string, secret []byte) error {
-	if !checkKeyringAvailable() {
-		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
-	}
-	if SecretExists(secretID) {
-		return fmt.Errorf("secret %s already exists in keyring, please use `conceal update` instead", secretID)
-	}
-
-	keyring, err := getSessionKeyring()
-	if err != nil {
-		return err
-	}
-
-	desc := keyDescription(secretID)
-	_, err = unix.AddKey("user", desc, secret, keyring)
-	if err != nil {
-		return fmt.Errorf("failed to add secret %s to keyring: %w", secretID, err)
-	}
-
-	// Verify the secret was added
-	if !SecretExists(secretID) {
-		return fmt.Errorf("secret %s was set but is not found in keyring", secretID)
-	}
-
-	return nil
-}
-
-// DeleteSecret removes a secret from the Linux kernel keyring
-func DeleteSecret(secretID string) error {
-	if !checkKeyringAvailable() {
-		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
-	}
-	keyring, err := getSessionKeyring()
-	if err != nil {
-		return err
-	}
-
-	desc := keyDescription(secretID)
-	keyID, err := unix.KeyctlSearch(keyring, "user", desc, 0)
-	if err != nil {
-		return fmt.Errorf("secret '%s' not found in keyring", secretID)
-	}
-
-	// Invalidate/unlink the key
-	_, err = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
-	if err != nil {
-		// Fallback to unlink if invalidate not supported
-		_, err = unix.KeyctlInt(unix.KEYCTL_UNLINK, keyID, keyring, 0, 0)
 		if err != nil {
-			return fmt.Errorf("failed to delete secret '%s' from keyring: %w", secretID, err)
+			return nil, fmt.Errorf("describe keyring entry: %w", err)
+		}
+		parts := strings.SplitN(strings.TrimRight(description, "\x00"), ";", 5)
+		if len(parts) == 5 && parts[0] == "user" && strings.HasPrefix(parts[4], keyDescPrefix) {
+			results = append(results, QueryResult{Account: strings.TrimPrefix(parts[4], keyDescPrefix)})
 		}
 	}
-
-	return nil
+	return results, nil
 }
 
-// GetSecret retrieves a secret and delivers it via clipboard or stdout
-func GetSecret(secretID string, delivery string) error {
-	if !checkKeyringAvailable() {
-		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
-	}
-	keyring, err := getSessionKeyring()
+func addSecret(id string, value []byte) error {
+	ring, err := userKeyring()
 	if err != nil {
 		return err
 	}
-
-	desc := keyDescription(secretID)
-	keyID, err := unix.KeyctlSearch(keyring, "user", desc, 0)
+	_, err = unix.KeyctlSearch(ring, "user", keyDescPrefix+id, 0)
+	if err == nil {
+		return fmt.Errorf("secret %q already exists; use conceal update", id)
+	}
+	if !errors.Is(err, unix.ENOKEY) {
+		return fmt.Errorf("check secret %q: %w", id, err)
+	}
+	_, err = unix.AddKey("user", keyDescPrefix+id, value, ring)
 	if err != nil {
-		return fmt.Errorf("secret '%s' not found in keyring", secretID)
+		return fmt.Errorf("add secret %q: %w", id, err)
 	}
-
-	// Get the secret data size first
-	size, err := unix.KeyctlBuffer(unix.KEYCTL_READ, keyID, nil, 0)
-	if err != nil {
-		return fmt.Errorf("failed to read secret '%s' from keyring: %w", secretID, err)
-	}
-
-	// Read the secret data
-	buf := make([]byte, size)
-	_, err = unix.KeyctlBuffer(unix.KEYCTL_READ, keyID, buf, 0)
-	if err != nil {
-		return fmt.Errorf("failed to read secret '%s' from keyring: %w", secretID, err)
-	}
-
-	password := string(buf)
-	switch delivery {
-	case "clipboard":
-		clipboard.Secret(password)
-	case "stdout":
-		fmt.Printf("%s", password)
-	}
-
 	return nil
 }
 
-// UpdateSecret updates an existing secret in the Linux kernel keyring
-func UpdateSecret(secretID string, secret []byte) error {
-	if !checkKeyringAvailable() {
-		return fmt.Errorf("secret management is not supported on this platform (kernel keyring unavailable)")
-	}
-	keyring, err := getSessionKeyring()
+func deleteSecret(id string) error {
+	key, err := findKey(id)
 	if err != nil {
 		return err
 	}
-
-	desc := keyDescription(secretID)
-	keyID, err := unix.KeyctlSearch(keyring, "user", desc, 0)
+	_, err = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, key, 0, 0, 0)
 	if err != nil {
-		return fmt.Errorf("secret %s does not exist in keyring, please use `conceal set` instead", secretID)
+		return fmt.Errorf("delete secret %q: %w", id, err)
 	}
+	return nil
+}
 
-	// Update the key payload
-	// Ensure we have write permission (ignore error, try anyway)
-	_ = unix.KeyctlSetperm(keyID, 0x3f3f0000)
-
-	// Linux keyring doesn't have a direct update; we delete and re-add
-	_, err = unix.KeyctlInt(unix.KEYCTL_INVALIDATE, keyID, 0, 0, 0)
+func readSecret(id string) ([]byte, error) {
+	key, err := findKey(id)
 	if err != nil {
-		_, err = unix.KeyctlInt(unix.KEYCTL_UNLINK, keyID, keyring, 0, 0)
-		if err != nil {
-			return fmt.Errorf("failed to update secret '%s': could not remove old value: %w", secretID, err)
-		}
+		return nil, err
 	}
-
-	// Add the new value
-	_, err = unix.AddKey("user", desc, secret, keyring)
+	value, err := readKeyringBuffer(unix.KEYCTL_READ, key)
 	if err != nil {
-		return fmt.Errorf("failed to update secret %s in keyring: %w", secretID, err)
+		return nil, fmt.Errorf("read secret %q: %w", id, err)
 	}
+	return value, nil
+}
 
+func updateSecret(id string, value []byte) error {
+	key, err := findKey(id)
+	if err != nil {
+		return err
+	}
+	// KEYCTL_UPDATE preserves the old value if the update fails.
+	_, err = unix.KeyctlBuffer(unix.KEYCTL_UPDATE, key, value, 0)
+	if err != nil {
+		return fmt.Errorf("update secret %q: %w", id, err)
+	}
 	return nil
 }
