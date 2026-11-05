@@ -1,134 +1,84 @@
-# This workflow will build a golang project and test cross-platform functionality
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
 name: Go Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, 'release/**']
   pull_request:
-    branches: [ "main", "v*" ]
+    branches: [main, 'v*']
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
-
-  test-cross-platform:
+  native:
+    name: ${{ matrix.os }} / Go ${{ matrix.go }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        go-version: ['1.21', '1.22']
-      fail-fast: false
+        go: ['1.26.x', '1.27.x']
     runs-on: ${{ matrix.os }}
+    env:
+      GOTOOLCHAIN: local
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Unit tests and race detector
+        run: go test -race -count=1 -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Create isolated macOS test keychain
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          password=$(uuidgen)
+          security create-keychain -p "$password" "$RUNNER_TEMP/conceal-test.keychain-db"
+          security set-keychain-settings -lut 3600 "$RUNNER_TEMP/conceal-test.keychain-db"
+          security unlock-keychain -p "$password" "$RUNNER_TEMP/conceal-test.keychain-db"
+          security default-keychain -s "$RUNNER_TEMP/conceal-test.keychain-db"
+      - name: Native credential store lifecycle
+        env:
+          CONCEAL_INTEGRATION: '1'
+        run: go test -count=1 -v ./pkg/conceal/keychain
+      - name: Remove macOS test keychain
+        if: always() && runner.os == 'macOS'
+        run: security delete-keychain "$RUNNER_TEMP/conceal-test.keychain-db"
+      - name: Build native CLI
+        run: go build -trimpath -o bin/ .
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary=./bin/conceal
+          if [[ "$RUNNER_OS" == Windows ]]; then binary=./bin/conceal.exe; fi
+          "$binary" version
+          "$binary" action example > example.json
+          "$binary" action validate example.json
+          "$binary" run --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ runner.os }}-go-${{ matrix.go }}
+          path: |
+            bin/
+            coverage.out
+          if-no-files-found: error
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-
-    - name: Cache Go modules
-      uses: actions/cache@v5
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-${{ matrix.go-version }}-
-
-    - name: Download dependencies
-      run: go mod download
-
-    - name: Run Tests with Coverage
-      shell: bash
-      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.go-version == '1.22'
-      uses: codecov/codecov-action@v5
-      with:
-        files: ./coverage.out
-        flags: unittests
-        name: codecov-umbrella
-
-    - name: Build for Current Platform
-      run: go build -v .
-
-    - name: Test Version Command
-      shell: bash
-      run: |
-        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          ./conceal.exe version
-        else
-          ./conceal version
-        fi
-
-  cross-compilation:
+  cross-build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-
-    - name: Cross Compile for Windows
-      run: |
-        GOOS=windows GOARCH=amd64 go build -o conceal-windows.exe .
-        ls -la conceal-windows.exe
-
-    - name: Cross Compile for macOS (syntax check only)
-      run: |
-        echo "Note: Full macOS build with CGO tested in macos-integration job"
-        echo "Cross-compilation test passed - actual macOS build requires native runner"
-
-    - name: Cross Compile for Linux
-      run: |
-        GOOS=linux GOARCH=amd64 go build -o conceal-linux .
-        ls -la conceal-linux
-
-  windows-integration:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-
-    - name: Build Windows Binary
-      run: go build -o conceal.exe .
-
-    - name: Test Basic Commands (Windows)
-      shell: pwsh
-      run: |
-        ./conceal.exe version
-        ./conceal.exe help
-        # Note: Cannot test actual credential operations in CI without user interaction
-
-    - name: Verify Windows-specific Code Compilation
-      run: go build -tags windows ./pkg/conceal/wincred/...
-
-  macos-integration:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-
-    - name: Build macOS Binary
-      run: go build -o conceal .
-
-    - name: Test Basic Commands (macOS)
-      run: |
-        ./conceal version
-        ./conceal help
-        # Note: Cannot test actual keychain operations in CI without user interaction
-
-    - name: Verify macOS-specific Code Compilation  
-      run: go build -tags darwin ./pkg/conceal/keychain/...
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - name: Windows and Linux release architectures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in linux/386 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
+            os=${target%/*}
+            arch=${target#*/}
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath -o "bin/conceal-$os-$arch" .
+          done

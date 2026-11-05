@@ -2,34 +2,34 @@ name: Security Checks
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, 'release/**']
   pull_request:
-    branches: [ "main", "v*" ]
+    branches: [main, 'v*']
   schedule:
-    - cron: '0 0 * * 1' # Weekly on Mondays
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate
-
+      - uses: actions/checkout@v5
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
   govulncheck:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-
-    - name: Install govulncheck
-      run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-    - name: Run govulncheck
-      run: govulncheck ./...
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
