@@ -46,7 +46,7 @@ Archives are named `conceal_<OS>_<architecture>.tar.gz` (Windows uses `.zip`). V
 Use Go 1.26 or newer; release builds use Go 1.27.3. macOS builds require Xcode Command Line Tools and CGO for the Security framework. Windows and Linux binaries do not require CGO.
 
 ```sh
-git clone https://github.com/infamousjoeg/conceal.git
+git clone --branch release/v4.3.0-rc.1 https://github.com/infamousjoeg/conceal.git
 cd conceal
 go build -trimpath -o bin/ .
 ```
