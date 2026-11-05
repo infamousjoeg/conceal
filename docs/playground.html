@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore Conceal action contracts and exact approvals. Try changed requests, expired approvals, and replay attempts without using real credentials.">
+  <title>Conceal — Action playground</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: light-dark(#fcfcfa, #171918);
+      --foreground: light-dark(#1d2623, #e9eeeb);
+      --muted-foreground: light-dark(#58645e, #a8b6ae);
+      --border: light-dark(#d3dad5, #3b4640);
+      --primary: light-dark(#1f3f33, #c3dfcf);
+      --primary-foreground: light-dark(#ffffff, #182b20);
+      --accent: light-dark(#e5eee9, #28362d);
+      --destructive: light-dark(#aa271d, #ffa59b);
+      --viz-series-1: light-dark(#26795c, #83c5a6);
+      --font-size-base: 15px;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header, main, footer { max-width: 850px; margin-inline: auto; padding-inline: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 24px; border-bottom: 1px solid var(--border); }
+    header a { text-decoration: none; }
+    .brand { font-size: 20px; font-weight: 600; letter-spacing: -.04em; }
+    nav { display: flex; gap: 20px; flex-wrap: wrap; }
+    a { color: var(--foreground); text-underline-offset: 4px; }
+    main { padding-block: 36px; }
+    h2 { font-size: 25px; font-weight: 500; letter-spacing: -.025em; margin: 0; }
+    h3 { font-size: 16px; font-weight: 500; margin: 0; }
+    p { line-height: 1.6; }
+    .text-small { font-size: 13px; }
+    .text-muted { color: var(--muted-foreground); }
+    .text-destructive { color: var(--destructive); }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .viz-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+    .form-label { display: grid; flex: 1 1 240px; min-width: 0; gap: 8px; }
+    .form-select { width: 100%; min-width: 0; border: 1px solid var(--border); padding: 11px 32px 11px 12px; border-radius: 8px; font: inherit; color: var(--foreground); background: var(--background); }
+    .btn { border: 1px solid var(--border); padding: 11px 16px; border-radius: 8px; font: inherit; font-weight: 500; cursor: pointer; }
+    .btn-primary { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
+    .btn:hover { filter: brightness(1.08); }
+    button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--viz-series-1); outline-offset: 3px; }
+    .viz-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+    [hidden] { display: none !important; }
+    footer { padding-block: 0 36px; color: var(--muted-foreground); font-size: 13px; }
+    footer p { margin: 12px 0; }
+    @media (max-width: 560px) {
+      header, main, footer { padding-inline: 16px; }
+      header { align-items: start; }
+      nav { gap: 12px; font-size: 13px; }
+      .form-select { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="../README.md">conceal</a>
+    <nav aria-label="Project"><a href="actions.md">Action guide</a><a href="https://github.com/infamousjoeg/conceal">Repository</a></nav>
+  </header>
+  <main>
+    <div id="conceal-action-explorer">
+  <style>
+    #conceal-action-explorer { color: var(--foreground); --edge: color-mix(in srgb, var(--foreground) 45%, var(--background)); --rule: color-mix(in srgb, var(--foreground) 20%, var(--background)); --side: color-mix(in srgb, var(--foreground) 6%, var(--background)); }
+    #conceal-action-explorer .heading { display: grid; gap: calc(var(--font-size-base) * .25); margin-bottom: calc(var(--font-size-base) * 1.5); padding-right: 90px; }
+    #conceal-action-explorer .controls { margin-bottom: calc(var(--font-size-base) * 1.5); }
+    #conceal-action-explorer .journey { display: grid; grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr) 48px minmax(0, 1fr); align-items: start; }
+    #conceal-action-explorer .landmark { display: grid; min-width: 0; }
+    #conceal-action-explorer .drawing { display: block; width: 100%; height: 170px; overflow: visible; }
+    #conceal-action-explorer .drawing path,
+    #conceal-action-explorer .drawing rect,
+    #conceal-action-explorer .drawing line { vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+    #conceal-action-explorer .face { fill: var(--background); stroke: var(--edge); stroke-width: 1; }
+    #conceal-action-explorer .side { fill: var(--side); stroke: var(--edge); stroke-width: 1; }
+    #conceal-action-explorer .rule { fill: none; stroke: var(--rule); stroke-width: 1; }
+    #conceal-action-explorer .mark { fill: color-mix(in srgb, var(--viz-series-1) 15%, var(--background)); stroke: none; }
+    #conceal-action-explorer .strong-rule { fill: none; stroke: var(--viz-series-1); stroke-width: 2; }
+    #conceal-action-explorer .caption { display: grid; gap: calc(var(--font-size-base) * .4); overflow-wrap: anywhere; }
+    #conceal-action-explorer .caption h3 { margin-bottom: calc(var(--font-size-base) * .25); }
+    #conceal-action-explorer .caption small { display: block; }
+    #conceal-action-explorer .flow-link { display: block; width: 100%; height: 170px; color: var(--rule); }
+    #conceal-action-explorer .flow-link .down { display: none; }
+    #conceal-action-explorer .flow-link.active { color: var(--viz-series-1); }
+    #conceal-action-explorer .flow-link.blocked { color: var(--destructive); }
+    #conceal-action-explorer .result { display: grid; gap: calc(var(--font-size-base) * .75); margin-top: calc(var(--font-size-base) * 1.5); }
+    #conceal-action-explorer .receipt { display: flex; flex-wrap: wrap; gap: calc(var(--font-size-base) * .5) calc(var(--font-size-base) * 1.5); }
+    #conceal-action-explorer .boundary { margin-top: calc(var(--font-size-base) * 1.5); padding-top: calc(var(--font-size-base) * .75); border-top: 1px solid var(--border); }
+    @media (max-width: 560px) {
+      #conceal-action-explorer .journey { grid-template-columns: minmax(0, 1fr); }
+      #conceal-action-explorer .landmark { grid-template-columns: 140px minmax(0, 1fr); gap: 16px; align-items: center; }
+      #conceal-action-explorer .drawing { height: 130px; }
+      #conceal-action-explorer .flow-link { width: 140px; height: 36px; }
+      #conceal-action-explorer .flow-link .across { display: none; }
+      #conceal-action-explorer .flow-link .down { display: inline; }
+      #conceal-action-explorer .caption { gap: calc(var(--font-size-base) * .25); }
+    }
+  </style>
+  <div class="heading">
+    <h2>Approve an action. Keep the key.</h2>
+    <span class="text-small text-muted">Conceal · action contracts playground</span>
+  </div>
+  <div class="viz-controls controls">
+    <label class="form-label">Requested action
+      <select class="form-select" id="ce-operation">
+        <option value="draft">Create a draft pull request</option>
+        <option value="issues">Read open issues</option>
+      </select>
+    </label>
+    <label class="form-label">Try a scenario
+      <select class="form-select" id="ce-scenario">
+        <option value="allowed">Exact request, valid approval</option>
+        <option value="unapproved">No approval yet</option>
+        <option value="changed">Request changed after approval</option>
+        <option value="expired">Approval expired</option>
+        <option value="reused">Approval already used</option>
+        <option value="wrong-repo">Repository outside the contract</option>
+        <option value="forbidden">Agent asks to merge instead</option>
+      </select>
+    </label>
+  </div>
+  <div class="journey" role="group" aria-label="Agent request, Conceal approval gate, and GitHub execution">
+    <section class="landmark">
+      <svg class="drawing" data-plate="request" role="img" aria-label="A request document with the proposed action and repository"></svg>
+      <div class="caption">
+        <h3>Agent proposes</h3>
+        <span id="ce-request">Create draft PR</span>
+        <span class="text-small" id="ce-repo">acme/payments</span>
+        <span class="text-small text-muted" id="ce-input">Title: Fix checkout timeout</span>
+      </div>
+    </section>
+    <svg class="flow-link" id="ce-link-in" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+      <defs><marker id="ce-arrow" orient="auto" markerUnits="userSpaceOnUse" refX="8" refY="5" markerWidth="10" markerHeight="10"><path d="M1 1L8 5 1 9" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></marker></defs>
+      <line class="across" x1="2" y1="42%" x2="96%" y2="42%" marker-end="url(#ce-arrow)"></line>
+      <line class="down" x1="50%" y1="2" x2="50%" y2="94%" marker-end="url(#ce-arrow)"></line>
+    </svg>
+    <section class="landmark">
+      <svg class="drawing" data-plate="gate" role="img" aria-label="Conceal checks the contract and exact approval; the native credential store stays in the trusted host"></svg>
+      <div class="caption">
+        <h3>Conceal checks</h3>
+        <span id="ce-contract">Contract: permitted</span>
+        <span class="text-small" id="ce-approval">Approval: exact match</span>
+        <span class="text-small text-muted tabular-nums" id="ce-budget">5 min remaining · 1 use</span>
+      </div>
+    </section>
+    <svg class="flow-link" id="ce-link-out" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+      <line class="across" x1="2" y1="42%" x2="96%" y2="42%" marker-end="url(#ce-arrow)"></line>
+      <line class="down" x1="50%" y1="2" x2="50%" y2="94%" marker-end="url(#ce-arrow)"></line>
+    </svg>
+    <section class="landmark">
+      <svg class="drawing" data-plate="api" role="img" aria-label="GitHub receives an authorized API request only after all checks pass"></svg>
+      <div class="caption">
+        <h3>GitHub executes</h3>
+        <span id="ce-api">Waiting for execution</span>
+        <span class="text-small">Fixed destination: api.github.com</span>
+        <span class="text-small text-muted" id="ce-credential">Credential stays with Conceal</span>
+      </div>
+    </section>
+  </div>
+  <div class="result">
+    <div class="viz-row">
+      <button type="button" class="btn btn-primary" id="ce-execute">Try execution</button>
+      <span class="text-small tabular-nums" id="ce-count">API calls: 0</span>
+    </div>
+    <div id="ce-status" role="status" aria-live="polite">Ready to test the approval gate.</div>
+    <div class="receipt text-small text-muted" id="ce-receipt" hidden></div>
+  </div>
+  <div class="boundary text-small text-muted">Agent receives: result · Trusted host holds: credential, policy, approvals</div>
+  <script>
+    (() => {
+      const root = document.getElementById("conceal-action-explorer");
+      const byId = id => root.querySelector("#ce-" + id);
+      const scenarios = new Set(["allowed", "unapproved", "changed", "expired", "reused", "wrong-repo", "forbidden"]);
+      let state = { operation: "draft", scenario: "allowed", attempted: false, consumed: false, calls: 0 };
+      function restore(snapshot) {
+        const saved = snapshot && snapshot.privateContent;
+        if (!saved || saved.version !== 1) return;
+        state = {
+          operation: saved.operation === "issues" ? "issues" : "draft",
+          scenario: scenarios.has(saved.scenario) ? saved.scenario : "allowed",
+          attempted: saved.attempted === true,
+          consumed: saved.consumed === true,
+          calls: saved.calls === 1 ? 1 : 0
+        };
+      }
+      function save() {
+        try { localStorage.setItem("conceal-playground-v1", JSON.stringify({ privateContent: { version: 1, ...state } })); } catch {}
+      }
+      const blockReason = {
+        unapproved: "Blocked: an exact approval is required.",
+        changed: "Blocked: the request no longer matches the approved content.",
+        expired: "Blocked: approval has expired.",
+        reused: "Blocked: this approval has already been consumed.",
+        "wrong-repo": "Blocked: this repository is outside the contract.",
+        forbidden: "Blocked: this contract never permits merging."
+      };
+      function render() {
+        const s = state.scenario;
+        const isDraft = state.operation === "draft";
+        const deniedByContract = s === "wrong-repo" || s === "forbidden";
+        const success = state.attempted && s === "allowed" && !state.consumed;
+        const denied = state.attempted && !success;
+        byId("operation").value = state.operation;
+        byId("scenario").value = s;
+        byId("request").textContent = s === "forbidden" ? "Merge pull request" : isDraft ? "Create draft PR" : "Read open issues";
+        byId("repo").textContent = s === "wrong-repo" ? "acme/production-admin" : "acme/payments";
+        byId("input").textContent = isDraft ? (s === "changed" ? "Title changed: Rewrite checkout" : "Title: Fix checkout timeout") : (s === "changed" ? "Filter changed: all issues" : "Filter: open · limit: 30");
+        byId("contract").textContent = deniedByContract ? "Contract: denied" : "Contract: permitted";
+        byId("approval").textContent = s === "unapproved" ? "Approval: missing" : s === "changed" ? "Approval: content mismatch" : s === "expired" ? "Approval: expired" : s === "reused" || state.consumed || success ? "Approval: consumed" : deniedByContract ? "Approval: cannot authorize this" : "Approval: exact match";
+        byId("budget").textContent = s === "expired" ? "Expired 1 min ago · 0 valid uses" : s === "unapproved" || deniedByContract ? "No usable approval" : s === "reused" || state.consumed || success ? "0 uses remaining" : "5 min remaining · 1 use";
+        byId("api").textContent = success ? (isDraft ? "Draft PR created" : "Open issues returned") : state.calls ? "No second request sent" : denied ? "No request sent" : "Waiting for execution";
+        byId("credential").textContent = success ? "Used by Conceal; not returned to agent" : "Credential stays with Conceal";
+        byId("count").textContent = "API calls: " + state.calls;
+        byId("execute").textContent = success ? "Try reusing approval" : "Try execution";
+        byId("status").textContent = success ? "Executed: exact request approved, sent once, and recorded." : denied ? (state.consumed ? blockReason.reused : blockReason[s]) : "Ready to test the approval gate.";
+        byId("status").className = denied ? "text-destructive" : "";
+        byId("link-in").classList.toggle("active", state.attempted);
+        byId("link-out").classList.toggle("active", success);
+        byId("link-out").classList.toggle("blocked", denied);
+        byId("receipt").hidden = !success;
+        byId("receipt").textContent = success ? "Receipt: action + request digest + outcome + time · no credential value" : "";
+        draw();
+      }
+      function draw() {
+        const completed = state.attempted && state.scenario === "allowed" && !state.consumed;
+        root.querySelectorAll("[data-plate]").forEach(svg => {
+          const width = Math.max(120, svg.getBoundingClientRect().width);
+          const height = svg.getBoundingClientRect().height || 170;
+          svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+          const scale = Math.min(1, (width - 12) / 195, (height - 12) / 142);
+          const x = (width - 195 * scale) / 2 + 54 * scale;
+          const y = (height - 142 * scale) / 2 + 8 * scale;
+          const type = svg.dataset.plate;
+          let content;
+          if (type === "request") {
+            content = '<path class="side" d="M0 132H126l2 4H2Z M126 0l2 4v132l-2-4Z"/><path class="face" d="M0 0H100l26 26v106H0Z"/><path class="rule" d="M100 0v26h26"/><path class="mark" d="M12 40h102v24H12Z"/><path class="strong-rule" d="M20 52h76"/><path class="rule" d="M12 78h102 M12 91h102 M12 104h69"/>';
+          } else if (type === "gate") {
+            content = '<path class="side" d="M-8 137h148l2 4H-6Z M140 23l2 4v114l-2-4Z"/><path class="face" d="M-8 23h148v114H-8Z"/><path class="rule" d="M5 97h110 M5 110h84 M5 123h63"/><path class="face" d="M0 0h132v83H0Z"/><path class="mark" d="M10 10h112v24H10Z"/><path class="rule" d="M15 22h88 M12 49h106 M12 65h62"/><path class="strong-rule" d="M84 65l7 7 15-18"/>';
+          } else {
+            content = '<path class="side" d="M0 115h142l2 4H2Z M142 8l2 4v107l-2-4Z"/><path class="face" d="M0 8h142v107H0Z"/><path class="rule" d="M0 34h142 M14 21h5 m8 0h5 m8 0h5 M20 55h55v41H20Z M75 75h18 M105 55v41"/><path class="mark" d="M95 45h22v20H95Z M95 85h22v20H95Z"/>' + (completed ? '<path class="strong-rule" d="M27 76l9 9 23-26"/>' : '<path class="rule" d="M29 68h35 M29 80h23"/>');
+          }
+          svg.innerHTML = '<g transform="matrix(' + scale + " " + (.25 * scale) + " " + (-.40 * scale) + " " + (.68 * scale) + " " + x + " " + y + ')">' + content + "</g>";
+        });
+      }
+      [byId("operation"), byId("scenario")].forEach(select => select.addEventListener("change", () => {
+        state = { operation: byId("operation").value, scenario: byId("scenario").value, attempted: false, consumed: false, calls: 0 };
+        render(); save();
+      }));
+      byId("execute").addEventListener("click", () => {
+        if (state.scenario === "allowed" && state.calls === 0) state.calls = 1;
+        else if (state.scenario === "allowed") state.consumed = true;
+        state.attempted = true;
+        render(); save();
+      });
+      try { restore(JSON.parse(localStorage.getItem("conceal-playground-v1"))); } catch {}
+      render();
+      if (typeof ResizeObserver !== "undefined") new ResizeObserver(draw).observe(root);
+    })();
+  </script>
+</div>
+
+  </main>
+  <footer>
+    <p>This is a local simulation. It does not read credentials, contact GitHub, or create a pull request.</p>
+    <p>In production, keep the policy, approval state, and credential store outside the agent’s writable environment. Conceal does not isolate an agent that already has unrestricted access to the approving user’s account.</p>
+  </footer>
+</body>
+</html>
