@@ -56,8 +56,11 @@ jobs:
               "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md",
               "docs/actions.md", "docs/getting-started.md", "docs/reference.md",
               "docs/playground.html",
+              "docs/desktop.md", "docs/aws.md", "docs/adapters.md",
               "examples/github-contract.json", "examples/list-issues.json",
               "examples/draft-pull-request.json",
+              "examples/s3-contract.json", "examples/list-s3-objects.json",
+              "examples/adapter/adapter.go", "examples/adapter/adapter_test.go",
           }
           checksums = dict(
               reversed(line.split(maxsplit=1))

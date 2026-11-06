@@ -33,7 +33,7 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-    files: [README.md, LICENSE, SECURITY.md, CONTRIBUTING.md, 'docs/*.md', 'docs/playground.html', 'examples/*']
+    files: [README.md, LICENSE, SECURITY.md, CONTRIBUTING.md, 'docs/*.md', 'docs/playground.html', 'examples/*.json', 'examples/adapter/*.go']
     formats: [tar.gz]
     format_overrides:
       - goos: windows

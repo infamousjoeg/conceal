@@ -6,7 +6,9 @@ An agent has prepared a fix and wants to open a draft pull request. Conceal lets
 
 **The branch must already be pushed.** Conceal opens the draft PR; it does not create a branch, commit code, or push changes. It can also list one page of issues.
 
-Today this is an **operator-mediated CLI workflow**. You run the commands in a trusted environment and review what the agent proposes. This candidate does not include an agent connector, MCP server, or sandbox. Before giving an untrusted agent direct access, you must supply the [separate execution boundary](#the-trust-boundary) described below.
+You can review and approve through the **[desktop inbox](desktop.md)** or the CLI commands below. Both use the same approval engine in your trusted operator environment. This candidate does not include an agent connector, MCP server, or sandbox. Before giving an untrusted agent direct access, you must supply the [separate execution boundary](#the-trust-boundary) described below.
+
+For another concrete use case, [list S3 backup names under an allowed prefix](aws.md). Contributors can [add a service with the adapter SDK](adapters.md).
 
 Two terms used in the CLI:
 

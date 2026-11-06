@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to Conceal! This document provides guidelines for contributing to our cross-platform secret management tool.
 
+To add a service, start with the **[adapter SDK and starter](docs/adapters.md)**. To work on the approval interface, use the **[desktop development guide](docs/desktop.md#build-or-contribute)**. Both include runnable checks and the current trust boundaries.
+
 ## Table of Contents
 - [Getting Started](#getting-started)
 - [Development Environment](#development-environment)

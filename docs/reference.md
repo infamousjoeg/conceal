@@ -14,6 +14,8 @@ Linux keyrings are kernel memory, not an encrypted disk vault. Secrets do not su
 
 Clipboard access requires a desktop session. On Linux, the clipboard library uses `xclip` or `xsel` and an X11-compatible display. Headless operations (`set`, `update`, `list`, `run`, and `action`) do not require clipboard support.
 
+The [desktop inbox](desktop.md) has separate WebView2/WebKitGTK requirements and native installer artifacts. The table above describes CLI archives.
+
 ## Store and manage secrets
 
 ```sh
@@ -63,6 +65,20 @@ The installed provider is `conceal_summon` (`conceal_summon.exe` on Windows), a 
 
 `conceal summon show <name>` writes the exact value to stdout for trusted consumers. It can expose credentials in terminal logs.
 
+## Discover and review service actions
+
+```sh
+conceal action adapters
+conceal action example --adapter github
+conceal action example --adapter aws
+conceal action inbox --limit 100
+conceal action review REQUEST_ID
+```
+
+`adapters` returns a schema-versioned catalog of installed operations, input/scope schemas, declared hosts, and credential roles. `inbox` returns up to 200 recent request summaries (100 by default). `review` returns the complete validated proposal, structured human review, credential names, approval state, and allowed transitions. These commands do not retrieve credentials or contact services.
+
+Use `--resource` for schema-2 preparation. `--repo` remains a mutually exclusive alias for existing GitHub workflows. Calling `action example` without an adapter retains the schema-1 GitHub example. See [GitHub actions](actions.md), [S3 listings](aws.md), and the [adapter SDK](adapters.md).
+
 ## Development and release checks
 
 ```sh
@@ -74,6 +90,8 @@ go vet ./...
 Unit tests use synthetic stores and do not touch your credential store or clipboard. To run the native lifecycle test, explicitly set `CONCEAL_INTEGRATION=1`; it creates random test entries and removes them. An opted-in test fails if the backend is unavailable. The race detector needs a supported C compiler.
 
 CI tests Go 1.26 and 1.27 on macOS, Windows, and Linux, runs native credential lifecycles, lints each platform, scans dependencies, and builds all seven release architectures. The packaging job runs on macOS to support CGO. Release workflows currently produce downloadable verification artifacts only; they do not publish releases or update package registries.
+
+The [desktop workflow](https://github.com/infamousjoeg/conceal/actions/workflows/desktop.yml) builds native installers on all three systems, checks the frontend and Rust bridge, and exercises the Windows WebView2 app with an isolated test profile. See the [desktop guide](desktop.md#build-or-contribute) for local commands.
 
 The Go packages remain available under `pkg/conceal`. Prefer `keychain.List()` (which reports backend failures) and `keychain.ReadSecret()` (caller-owned bytes to clear after use); `ListSecrets()` is retained for compatibility. `clipboard.Secret()` reports delivery/cleanup errors.
 

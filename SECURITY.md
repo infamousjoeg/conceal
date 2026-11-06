@@ -11,7 +11,7 @@ Use the latest [published stable release](https://github.com/infamousjoeg/concea
 | Workflow | Who receives the key? | What you must trust |
 | --- | --- | --- |
 | `conceal run` or the Summon provider | The launched program | That program and its environment |
-| `conceal action` | Conceal's GitHub adapter; the caller receives the result | The operator's execution context, contract, approval state, and credential store |
+| `conceal action` / desktop inbox | Conceal's shared execution engine; the caller receives the result | The operator's execution context, installed adapter code, contract, approval state, and credential store |
 | `conceal get` | The clipboard and applications that can read it | The desktop session and clipboard consumers |
 | `conceal summon show` | Standard output | Every consumer of that output |
 
@@ -21,13 +21,17 @@ Conceal does not implement Touch ID, Face ID, or Windows Hello approval. The `ac
 
 ### Action authorization
 
-The GitHub adapter checks an explicit repository/operation contract and a short-lived approval bound to the exact request before retrieving a credential. It consumes approval before dispatch, rejects redirects, and does not retry automatically.
+The shared action engine checks an explicit resource/operation contract and a short-lived approval bound to the exact request before retrieving credentials. It consumes approval before dispatch, rejects redirects, and does not retry automatically. Schema-2 requests also bind the full adapter plan and behavior version. The AWS adapter uses host-owned SigV4 signing; it does not discover credentials or call the AWS CLI.
+
+Adapters are trusted code compiled into the application. The public SDK, endpoint declarations, and conformance tests are not a sandbox. Installed adapter code and its dependencies require review. There is no dynamic plugin loader.
+
+The desktop sends the digest of the displayed review to the same engine. Its Rust bridge accepts fixed commands and invokes a bundled executable; the webview has no general shell permission. Practice mode uses synthetic in-memory data. Neither a checkbox nor an application window proves human presence or prevents unrestricted same-account code from approving through the CLI. See [desktop operator context](docs/desktop.md#keep-the-operator-context-trusted).
 
 The candidate requires an operator or separately configured trusted boundary. It does not include an agent connector, sandbox, or network approval service. See the [action threat model](docs/actions.md#the-trust-boundary), [uncertain outcomes](docs/actions.md#single-use-and-uncertain-outcomes), and [receipt limitations](docs/actions.md#results-and-receipts) before deployment.
 
 ### Output, memory, and clipboard limits
 
-`run` masks exact key values in stdout/stderr by default; `--no-redact` disables that masking. Encoding, transformation, files, and network traffic are outside this protection. The launched program receives the real key. The action adapter also masks exact token values in returned responses, but those responses may contain other private data.
+`run` masks exact key values in stdout/stderr by default; `--no-redact` disables that masking. Encoding, transformation, files, and network traffic are outside this protection. The launched program receives the real key. The action engine also masks exact credential values and their JSON string escapes in returned responses, but those responses may contain other private data.
 
 Conceal clears owned secret buffers where possible. This does not guarantee erasure of every copy in Go, OS APIs, child processes, or crash dumps.
 
@@ -35,9 +39,15 @@ Conceal clears owned secret buffers where possible. This does not guarantee eras
 
 ## Automated Security
 
-CI runs `golangci-lint`, `govulncheck`, dependency review on pull requests, and platform tests. The [security workflow](https://github.com/infamousjoeg/conceal/blob/release/v4.3.0-rc.1/.github/workflows/security.yml) defines scan triggers. Automated checks reduce known risks; passing them does not prove an absence of vulnerabilities.
+CI runs `golangci-lint`, `govulncheck`, npm audit, RustSec cargo audit, dependency review on pull requests, and platform tests. The [security workflow](https://github.com/infamousjoeg/conceal/blob/release/v4.3.0-rc.1/.github/workflows/security.yml) defines scan triggers. Automated checks reduce known risks; passing them does not prove an absence of vulnerabilities.
 
 Candidate archives include checksums for integrity verification. They are not Developer ID signed or notarized. Current release workflows build verification artifacts without publishing releases or updating registries.
+
+### Desktop dependency warnings
+
+The current Tauri Linux dependency tree uses GTK 3 / GLib 0.18.5. RustSec reports [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429) for `glib::VariantStrIter`, whose iterator implementation can dereference a null pointer. The fixed GLib 0.20 API is not a compatible replacement for that GTK dependency. Conceal does not call `Variant::array_iter_str` or `VariantStrIter`; source inspection of the locked runtime dependencies found no call sites outside GLib's own examples/tests. Reassess reachability whenever this dependency tree or application code changes. This finding does not establish that the dependency is free of other defects.
+
+RustSec also reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370): the build-time `proc-macro-error` 1.0.4 dependency used by the GTK/GLib macros is unmaintained. Both warnings remain visible in cargo audit output; there is no advisory ignore list. Windows and macOS do not use the affected GTK runtime.
 
 ## Reporting a Vulnerability
 
@@ -107,7 +117,7 @@ We appreciate security researchers who report vulnerabilities responsibly. Pleas
 
 ### Scope
 
-Conceal helps avoid keys in project files, limit which keys a trusted process receives, and authorize specific GitHub requests. It does not protect against a compromised OS, unrestricted same-account code, malicious trusted applications, or privileged memory inspection. Local receipts are editable by their owner and are not signed audit evidence.
+Conceal helps avoid keys in project files, limit which keys a trusted process receives, and authorize specific service requests. It does not protect against a compromised OS, unrestricted same-account code, malicious trusted applications or adapters, or privileged memory inspection. Local receipts are editable by their owner and are not signed audit evidence.
 
 ### Assumptions
 - User's operating system and credential store are secure

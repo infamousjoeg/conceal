@@ -6,6 +6,7 @@ Choose a first task:
 
 - [Run a Python app with a stored key](#run-your-first-app).
 - [Review a GitHub action without a token](actions.md#try-it-without-a-token).
+- [Try the desktop approval inbox](desktop.md) or [review an S3 backup listing](aws.md).
 - [Use an existing Summon workflow](#use-your-existing-summon-workflow).
 
 The examples use made-up values. You do not need a real API account to try them.
