@@ -18,7 +18,7 @@ jobs:
           - os: windows-latest
             bundles: nsis
           - os: macos-latest
-            bundles: dmg
+            bundles: app,dmg
           - os: ubuntu-22.04
             bundles: deb,appimage
     runs-on: ${{ matrix.os }}
@@ -53,6 +53,9 @@ jobs:
       - run: npm run sidecar
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Verify GLib backport under release optimization
+        if: runner.os == 'Linux'
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --release glib_string_iteration
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
       - name: Build native installer without publishing
         run: npm run desktop:build -- --bundles ${{ matrix.bundles }}
@@ -85,6 +88,11 @@ jobs:
               for packaged in packaged_engines:
                   packaged_version = subprocess.check_output([packaged, "version"], text=True)
                   assert packaged_version.strip() == "conceal v4.3.0-rc.1", packaged
+              licenses = [p for p in bundle.rglob("LICENSE")
+                          if p.parent.name == "glib" and p.parent.parent.name == "licenses"]
+              assert licenses, "GLib license missing from native package staging"
+              expected_license = (root / "src-tauri/vendor/glib/LICENSE").read_bytes()
+              assert all(p.read_bytes() == expected_license for p in licenses)
           with tempfile.TemporaryDirectory() as directory:
               state = pathlib.Path(directory) / "state"
               args = [str(engine), "action", "--state-dir", str(state)]
@@ -107,6 +115,11 @@ jobs:
               shutil.copy2(path, destination / path.name)
           for name in ("README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"):
               shutil.copy2(root.parent / name, destination / name)
+          notices = destination / "third-party/glib"
+          notices.mkdir(parents=True)
+          for name in ("LICENSE", "COPYRIGHT"):
+              shutil.copy2(root / "src-tauri/vendor/glib" / name, notices / name)
+          shutil.copy2(root / "src-tauri/vendor/README.md", notices / "BACKPORT.md")
           shutil.copytree(root.parent / "docs", destination / "docs")
           shutil.copytree(root.parent / "examples", destination / "examples")
           entries = []

@@ -128,6 +128,25 @@ fn main() {
 mod tests {
     use super::*;
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn glib_string_iteration_uses_a_mutable_output_pointer() {
+        use glib::variant::ToVariant;
+
+        let values = ["zero", "one", "two", "three", "four", "five"];
+        let variant = values.to_variant();
+        let mut iter = variant.array_iter_str().unwrap();
+        assert_eq!(iter.next(), Some("zero"));
+        assert_eq!(iter.next_back(), Some("five"));
+        assert_eq!(iter.nth(1), Some("two"));
+        assert_eq!(iter.nth_back(1), Some("three"));
+        assert_eq!(iter.next(), None);
+        assert_eq!(
+            variant.array_iter_str().unwrap().collect::<Vec<_>>(),
+            values
+        );
+    }
+
     #[test]
     fn approval_carries_only_the_displayed_digest() {
         let args = arguments("approve", Some(&"a".repeat(32)), Some(&"b".repeat(64))).unwrap();

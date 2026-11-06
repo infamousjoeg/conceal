@@ -27,6 +27,7 @@ jobs:
         working-directory: desktop
       - run: npm audit --audit-level=moderate
         working-directory: desktop
+      - run: python3 desktop/scripts/verify-glib-backport.py
       - run: cargo install cargo-audit --version 0.22.2 --locked
       - run: cargo audit --file desktop/src-tauri/Cargo.lock
   dependency-review:

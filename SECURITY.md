@@ -45,9 +45,9 @@ Candidate archives include checksums for integrity verification. They are not De
 
 ### Desktop dependency warnings
 
-The current Tauri Linux dependency tree uses GTK 3 / GLib 0.18.5. RustSec reports [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429) for `glib::VariantStrIter`, whose iterator implementation can dereference a null pointer. The fixed GLib 0.20 API is not a compatible replacement for that GTK dependency. Conceal does not call `Variant::array_iter_str` or `VariantStrIter`; source inspection of the locked runtime dependencies found no call sites outside GLib's own examples/tests. Reassess reachability whenever this dependency tree or application code changes. This finding does not establish that the dependency is free of other defects.
+The Tauri Linux dependency tree requires GTK 3 / GLib 0.18.5. Conceal includes a [verified local backport](https://github.com/infamousjoeg/conceal/tree/release/v4.3.0-rc.1/desktop/src-tauri/vendor) of the upstream fix for [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429). The fix makes the `VariantStrIter` output pointer mutable, removing undefined behavior that can cause a null-pointer dereference. CI compares every vendored file against the checksum-verified official archive, permits only the upstream two-line change, and runs a regression test with release optimization. GLib 0.20 is not compatible with this GTK dependency.
 
-RustSec also reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370): the build-time `proc-macro-error` 1.0.4 dependency used by the GTK/GLib macros is unmaintained. Both warnings remain visible in cargo audit output; there is no advisory ignore list. Windows and macOS do not use the affected GTK runtime.
+Version-only scanners may still report the upstream GLib advisory because the patched package retains version 0.18.5. RustSec also reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370): the build-time `proc-macro-error` 1.0.4 dependency used by the GTK/GLib macros is unmaintained. Cargo audit warnings remain visible; there is no cargo advisory ignore list. Windows and macOS do not use the GTK runtime. Remove the backport when a compatible fixed dependency becomes available.
 
 ## Reporting a Vulnerability
 
