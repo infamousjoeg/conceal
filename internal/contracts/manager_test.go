@@ -24,7 +24,7 @@ func (f transportFunc) RoundTrip(r *http.Request) (*http.Response, error) { retu
 func fixture(t *testing.T) (Manager, string, *atomic.Int32, *atomic.Int32) {
 	t.Helper()
 	root := t.TempDir()
-	contract := Contract{1, "review", "github/token", []string{"owner/repo"}, []string{ListIssues, CreateDraft}, 300}
+	contract := Contract{SchemaVersion: 1, Name: "review", Credential: "github/token", Repositories: []string{"owner/repo"}, Actions: []string{ListIssues, CreateDraft}, ApprovalTTLSeconds: 300}
 	path := filepath.Join(root, "contract.json")
 	data, _ := json.Marshal(contract)
 	if err := os.WriteFile(path, data, 0600); err != nil {

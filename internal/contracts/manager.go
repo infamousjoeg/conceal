@@ -15,8 +15,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 	"time"
+
+	"github.com/infamousjoeg/conceal/internal/adapters"
+	"github.com/infamousjoeg/conceal/pkg/conceal/adapter"
 )
 
 const maxDocument = 1024 * 1024
@@ -29,9 +31,11 @@ type Request struct {
 	ContractPath string          `json:"contract_path"`
 	Contract     Contract        `json:"contract"`
 	Action       string          `json:"action"`
-	Repository   string          `json:"repository"`
+	Repository   string          `json:"repository,omitempty"`
 	Input        json.RawMessage `json:"input"`
 	HTTP         HTTPRequest     `json:"http"`
+	Resource     string          `json:"resource,omitempty"`
+	Plan         *adapter.Plan   `json:"plan,omitempty"`
 }
 
 type Proposal struct {
@@ -50,10 +54,12 @@ type Receipt struct {
 	ID            string    `json:"id"`
 	Digest        string    `json:"digest"`
 	Action        string    `json:"action"`
-	Repository    string    `json:"repository"`
+	Repository    string    `json:"repository,omitempty"`
 	Outcome       string    `json:"outcome"`
 	HTTPStatus    int       `json:"http_status,omitempty"`
 	Time          time.Time `json:"time"`
+	Adapter       string    `json:"adapter,omitempty"`
+	Resource      string    `json:"resource,omitempty"`
 }
 
 type Result struct {
@@ -69,6 +75,21 @@ type Manager struct {
 	ReadSecret func(string) ([]byte, error)
 	Transport  http.RoundTripper
 	Now        func() time.Time
+	Registry   *adapter.Registry
+}
+
+func (m Manager) registry() *adapter.Registry {
+	if m.Registry != nil {
+		return m.Registry
+	}
+	return adapters.NewRegistry()
+}
+
+func (r Request) target() string {
+	if r.Contract.SchemaVersion == 1 {
+		return r.Repository
+	}
+	return r.Resource
 }
 
 func (m Manager) now() time.Time {
@@ -101,11 +122,15 @@ func readDocument(path string, target any) error {
 }
 
 func LoadContract(path string) (Contract, error) {
+	return loadContract(path, adapters.NewRegistry())
+}
+
+func loadContract(path string, registry *adapter.Registry) (Contract, error) {
 	var contract Contract
 	if err := readDocument(path, &contract); err != nil {
 		return contract, err
 	}
-	return contract, contract.Validate()
+	return contract, contract.validate(registry)
 }
 
 func (m Manager) path(id, extension string) (string, error) {
@@ -164,7 +189,7 @@ func (m Manager) Prepare(contractPath, action, repo string, input json.RawMessag
 	if err != nil {
 		return proposal, err
 	}
-	contract, err := LoadContract(path)
+	contract, err := loadContract(path, m.registry())
 	if err != nil {
 		return proposal, err
 	}
@@ -177,7 +202,7 @@ func (m Manager) Prepare(contractPath, action, repo string, input json.RawMessag
 		return proposal, err
 	}
 	input = compact.Bytes()
-	request, err := Build(contract, action, repo, input)
+	plan, err := contract.plan(m.registry(), action, repo, input)
 	if err != nil {
 		return proposal, err
 	}
@@ -186,7 +211,17 @@ func (m Manager) Prepare(contractPath, action, repo string, input json.RawMessag
 		return proposal, err
 	}
 	id := hex.EncodeToString(idBytes)
-	proposal.Request = Request{id, m.now(), path, contract, action, repo, input, request}
+	proposal.Request = Request{
+		ID: id, CreatedAt: m.now(), ContractPath: path, Contract: contract,
+		Action: action, Input: input, HTTP: plan.HTTP,
+	}
+	if contract.SchemaVersion == 1 {
+		proposal.Request.Repository = repo
+		proposal.Request.HTTP.Headers = nil
+	} else {
+		proposal.Request.Resource = repo
+		proposal.Request.Plan = &plan
+	}
 	proposal.Digest = digest(proposal.Request)
 	destination, _ := m.path(id, ".request.json")
 	err = writeExclusive(destination, proposal)
@@ -205,18 +240,26 @@ func (m Manager) Inspect(id string) (Proposal, error) {
 	if proposal.Request.ID != id || proposal.Digest != digest(proposal.Request) {
 		return proposal, fmt.Errorf("request changed; prepare a new request")
 	}
-	contract, err := LoadContract(proposal.Request.ContractPath)
+	contract, err := loadContract(proposal.Request.ContractPath, m.registry())
 	if err != nil {
 		return proposal, err
 	}
 	if digest(contract) != digest(proposal.Request.Contract) {
 		return proposal, fmt.Errorf("contract changed; prepare a new request")
 	}
-	expected, err := Build(contract, proposal.Request.Action, proposal.Request.Repository, proposal.Request.Input)
+	expected, err := contract.plan(m.registry(), proposal.Request.Action, proposal.Request.target(), proposal.Request.Input)
 	if err != nil {
 		return proposal, err
 	}
-	if digest(expected) != digest(proposal.Request.HTTP) {
+	if contract.SchemaVersion == 1 {
+		expected.HTTP.Headers = nil
+		if proposal.Request.Plan != nil || proposal.Request.Resource != "" {
+			return proposal, fmt.Errorf("unexpected fields in a legacy request")
+		}
+	} else if proposal.Request.Plan == nil || proposal.Request.Repository != "" || digest(expected) != digest(proposal.Request.Plan) {
+		return proposal, fmt.Errorf("adapter plan changed; prepare a new request")
+	}
+	if digest(expected.HTTP) != digest(proposal.Request.HTTP) {
 		return proposal, fmt.Errorf("request does not match its contract")
 	}
 	return proposal, nil
@@ -277,7 +320,13 @@ func (m Manager) Approve(id, reviewedDigest string) (Approval, error) {
 }
 
 func (m Manager) saveReceipt(proposal Proposal, outcome string, status int) (Receipt, error) {
-	receipt := Receipt{1, proposal.Request.ID, proposal.Digest, proposal.Request.Action, proposal.Request.Repository, outcome, status, m.now()}
+	receipt := Receipt{
+		SchemaVersion: proposal.Request.Contract.SchemaVersion, ID: proposal.Request.ID, Digest: proposal.Digest,
+		Action: proposal.Request.Action, Repository: proposal.Request.Repository, Outcome: outcome, HTTPStatus: status, Time: m.now(),
+	}
+	if receipt.SchemaVersion == 2 {
+		receipt.Adapter, receipt.Resource = proposal.Request.Contract.Adapter, proposal.Request.Resource
+	}
 	path, _ := m.path(proposal.Request.ID, ".receipt.json")
 	return receipt, writeExclusive(path, receipt)
 }
@@ -328,28 +377,33 @@ func (m Manager) Execute(ctx context.Context, id string) (Result, error) {
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
-	if m.ReadSecret == nil {
-		return result, fmt.Errorf("contract credential store unavailable")
-	}
-	credential, err := m.ReadSecret(proposal.Request.Contract.Credential)
+	plan, err := proposal.Request.Contract.plan(m.registry(), proposal.Request.Action, proposal.Request.target(), proposal.Request.Input)
 	if err != nil {
-		return result, fmt.Errorf("contract credential unavailable")
-	}
-	defer clear(credential)
-	if len(credential) == 0 || strings.ContainsAny(string(credential), "\x00\r\n") {
-		return result, fmt.Errorf("contract credential is not a valid API token")
+		return result, err
 	}
 	call := proposal.Request.HTTP
 	request, err := http.NewRequestWithContext(ctx, call.Method, call.URL, bytes.NewReader(call.Body))
 	if err != nil {
 		return result, err
 	}
-	request.Header.Set("Authorization", "Bearer "+string(credential))
-	request.Header.Set("Accept", "application/vnd.github+json")
-	request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	for name, value := range plan.HTTP.Headers {
+		request.Header.Set(name, value)
+	}
 	request.Header.Set("User-Agent", "Conceal")
-	if len(call.Body) > 0 {
-		request.Header.Set("Content-Type", "application/json")
+	credentials, err := m.authenticate(ctx, request, plan, proposal.Request.Contract.credentialReferences())
+	defer func() {
+		for _, credential := range credentials {
+			clear(credential)
+		}
+	}()
+	if err != nil {
+		return result, err
+	}
+	if !m.now().Before(approval.ExpiresAt) {
+		return result, fmt.Errorf("approval expired before dispatch")
+	}
+	if err := ctx.Err(); err != nil {
+		return result, err
 	}
 	// Disallow transport retries from rewinding an approved request body.
 	request.GetBody = nil
@@ -385,16 +439,18 @@ func (m Manager) Execute(ctx context.Context, id string) (Result, error) {
 	if outcome == "response_error" {
 		return result, errors.Join(fmt.Errorf("response unreadable or exceeds 4 MiB; approval consumed"), err)
 	}
-	encoded, _ := json.Marshal(string(credential))
-	data = bytes.ReplaceAll(data, encoded[1:len(encoded)-1], []byte("[REDACTED]"))
-	data = bytes.ReplaceAll(data, credential, []byte("[REDACTED]"))
+	for _, credential := range credentials {
+		encoded, _ := json.Marshal(string(credential))
+		data = bytes.ReplaceAll(data, encoded[1:len(encoded)-1], []byte("[REDACTED]"))
+		data = bytes.ReplaceAll(data, credential, []byte("[REDACTED]"))
+	}
 	if json.Valid(data) {
 		result.Response = data
 	} else {
 		result.Response, _ = json.Marshal(string(data))
 	}
 	if outcome != "succeeded" {
-		return result, errors.Join(fmt.Errorf("GitHub returned HTTP %d; approval consumed", response.StatusCode), err)
+		return result, errors.Join(fmt.Errorf("remote service returned HTTP %d; approval consumed", response.StatusCode), err)
 	}
 	return result, err
 }

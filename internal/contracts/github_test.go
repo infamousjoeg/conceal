@@ -6,7 +6,7 @@ import (
 )
 
 func TestContractLimitsAndDraftEnforcement(t *testing.T) {
-	contract := Contract{1, "test", "github/token", []string{"owner/repo"}, []string{ListIssues, CreateDraft}, 300}
+	contract := Contract{SchemaVersion: 1, Name: "test", Credential: "github/token", Repositories: []string{"owner/repo"}, Actions: []string{ListIssues, CreateDraft}, ApprovalTTLSeconds: 300}
 	request, err := Build(contract, CreateDraft, "owner/repo", json.RawMessage(`{"title":"Fix","head":"feature","base":"main","body":"Description"}`))
 	if err != nil {
 		t.Fatal(err)
