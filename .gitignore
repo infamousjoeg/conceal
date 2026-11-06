@@ -1,1 +1,16 @@
 bin/
+dist/
+coverage.out
+*.test
+/conceal
+/conceal.exe
+.claude/
+.codex/
+.agents/
+/desktop/node_modules/
+/desktop/dist/
+/desktop/src-tauri/target/
+/desktop/src-tauri/binaries/
+/desktop/src-tauri/gen/
+/desktop/test-results/
+/desktop/playwright-report/

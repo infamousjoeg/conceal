@@ -2,34 +2,51 @@ name: Security Checks
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, 'release/**']
   pull_request:
-    branches: [ "main", "v*" ]
+    branches: [main, 'v*']
   schedule:
-    - cron: '0 0 * * 1' # Weekly on Mondays
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
+  desktop-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.92.0'
+      - run: npm ci
+        working-directory: desktop
+      - run: npm audit --audit-level=moderate
+        working-directory: desktop
+      - run: python3 desktop/scripts/verify-glib-backport.py
+      - run: cargo install cargo-audit --version 0.22.2 --locked
+      - run: cargo audit --file desktop/src-tauri/Cargo.lock
   dependency-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate
-
+      - uses: actions/checkout@v5
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
   govulncheck:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-
-    - name: Install govulncheck
-      run: go install golang.org/x/vuln/cmd/govulncheck@latest
-
-    - name: Run govulncheck
-      run: govulncheck ./...
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...

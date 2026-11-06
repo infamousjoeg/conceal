@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "name": "repository-review",
+  "credential": "github/token",
+  "repositories": ["OWNER/REPOSITORY"],
+  "actions": ["github.issues.list", "github.pulls.create-draft"],
+  "approval_ttl_seconds": 300
+}

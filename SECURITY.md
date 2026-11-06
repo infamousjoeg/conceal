@@ -2,56 +2,52 @@
 
 ## Supported Versions
 
-We take security seriously and provide security updates for the following versions:
-
-| Version | Supported          | End of Life |
-| ------- | ------------------ | ----------- |
-| 4.1.x   | ✅ Full support    | N/A         |
-| 4.0.x   | ✅ Security fixes  | 2025-12-31  |
-| < 4.0   | ❌ Not supported   | 2024-01-01  |
+Use the latest [published stable release](https://github.com/infamousjoeg/conceal/releases) for stable deployments. The 4.3 branch is a release candidate: please report findings against it, but do not treat candidate status as a production security certification. Include the exact output of `conceal version` in reports.
 
 ## Security Features
 
-### Platform-Specific Security
+### Choose the appropriate workflow
 
-**macOS Keychain:**
-- Leverages macOS Security Framework
-- Encrypted storage using hardware encryption when available
-- Respects keychain access policies and user permissions
-- Integrates with Touch ID/Face ID authentication when configured
+| Workflow | Who receives the key? | What you must trust |
+| --- | --- | --- |
+| `conceal run` or the Summon provider | The launched program | That program and its environment |
+| `conceal action` / desktop inbox | Conceal's shared execution engine; the caller receives the result | The operator's execution context, installed adapter code, contract, approval state, and credential store |
+| `conceal get` | The clipboard and applications that can read it | The desktop session and clipboard consumers |
+| `conceal summon show` | Standard output | Every consumer of that output |
 
-**Windows Credential Manager:**
-- Uses Windows Credential Manager APIs (advapi32.dll)
-- Encrypted storage using Windows Data Protection API (DPAPI)
-- Respects Windows user access controls and group policies
-- Integrates with Windows Hello when available
+Conceal uses macOS Keychain, Windows Credential Manager, or the Linux kernel user keyring. OS access controls apply. Linux values are held in kernel memory and do not survive reboot; they are not an encrypted disk vault.
 
-### Application Security
+Conceal does not implement Touch ID, Face ID, or Windows Hello approval. The `action approve` command does not authenticate human presence. A process with unrestricted access to the same account can invoke approval or retrieve keys through another route.
 
-- **No Secret Logging**: Secrets are never written to logs or console output (except via explicit `show` command)
-- **Memory Safety**: Secrets are cleared from memory when possible
-- **Clipboard Security**: 15-second auto-clear with interrupt handling
-- **Input Validation**: All user inputs are validated and sanitized
-- **Build Security**: Reproducible builds with dependency verification
+### Action authorization
+
+The shared action engine checks an explicit resource/operation contract and a short-lived approval bound to the exact request before retrieving credentials. It consumes approval before dispatch, rejects redirects, and does not retry automatically. Schema-2 requests also bind the full adapter plan and behavior version. The AWS adapter uses host-owned SigV4 signing; it does not discover credentials or call the AWS CLI.
+
+Adapters are trusted code compiled into the application. The public SDK, endpoint declarations, and conformance tests are not a sandbox. Installed adapter code and its dependencies require review. There is no dynamic plugin loader.
+
+The desktop sends the digest of the displayed review to the same engine. Its Rust bridge accepts fixed commands and invokes a bundled executable; the webview has no general shell permission. Practice mode uses synthetic in-memory data. Neither a checkbox nor an application window proves human presence or prevents unrestricted same-account code from approving through the CLI. See [desktop operator context](docs/desktop.md#keep-the-operator-context-trusted).
+
+The candidate requires an operator or separately configured trusted boundary. It does not include an agent connector, sandbox, or network approval service. See the [action threat model](docs/actions.md#the-trust-boundary), [uncertain outcomes](docs/actions.md#single-use-and-uncertain-outcomes), and [receipt limitations](docs/actions.md#results-and-receipts) before deployment.
+
+### Output, memory, and clipboard limits
+
+`run` masks exact key values in stdout/stderr by default; `--no-redact` disables that masking. Encoding, transformation, files, and network traffic are outside this protection. The launched program receives the real key. The action engine also masks exact credential values and their JSON string escapes in returned responses, but those responses may contain other private data.
+
+Conceal clears owned secret buffers where possible. This does not guarantee erasure of every copy in Go, OS APIs, child processes, or crash dumps.
+
+`get` clears the clipboard after 15 seconds only if it still contains the copied value. Other applications and clipboard history may retain copies. Hidden input prevents terminal echo; never put real keys in command arguments or shell history.
 
 ## Automated Security
 
-### Continuous Security Monitoring
+CI runs `golangci-lint`, `govulncheck`, npm audit, RustSec cargo audit, dependency review on pull requests, and platform tests. The [security workflow](https://github.com/infamousjoeg/conceal/blob/release/v4.3.0-rc.1/.github/workflows/security.yml) defines scan triggers. Automated checks reduce known risks; passing them does not prove an absence of vulnerabilities.
 
-Our CI/CD pipeline includes:
+Candidate archives include checksums for integrity verification. They are not Developer ID signed or notarized. Current release workflows build verification artifacts without publishing releases or updating registries.
 
-- **Gosec**: Static security analysis for Go code
-- **Nancy**: Dependency vulnerability scanning  
-- **govulncheck**: Official Go vulnerability database checking
-- **Dependabot**: Automated dependency updates
-- **CodeQL**: Advanced semantic code analysis (planned)
+### Desktop dependency warnings
 
-### Security Workflows
+The Tauri Linux dependency tree requires GTK 3 / GLib 0.18.5. Conceal includes a [verified local backport](https://github.com/infamousjoeg/conceal/tree/release/v4.3.0-rc.1/desktop/src-tauri/vendor) of the upstream fix for [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429). The fix makes the `VariantStrIter` output pointer mutable, removing undefined behavior that can cause a null-pointer dereference. CI compares every vendored file against the checksum-verified official archive, permits only the upstream two-line change, and runs a regression test with release optimization. GLib 0.20 is not compatible with this GTK dependency.
 
-- **Weekly Scans**: Automated security scans every Monday
-- **PR Security**: All pull requests undergo security analysis
-- **Dependency Updates**: Automatic updates for security patches
-- **Release Security**: Security verification before each release
+Version-only scanners may still report the upstream GLib advisory because the patched package retains version 0.18.5. RustSec also reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370): the build-time `proc-macro-error` 1.0.4 dependency used by the GTK/GLib macros is unmaintained. Cargo audit warnings remain visible; there is no cargo advisory ignore list. Windows and macOS do not use the GTK runtime. Remove the backport when a compatible fixed dependency becomes available.
 
 ## Reporting a Vulnerability
 
@@ -101,8 +97,8 @@ We appreciate security researchers who report vulnerabilities responsibly. Pleas
 2. **Secure Environment**: Use Conceal only on trusted systems
 3. **Access Control**: Limit who has access to your credential stores
 4. **Regular Audits**: Periodically review stored secrets with `conceal list`
-5. **Backup Strategy**: Ensure your OS credential store is backed up securely
-6. **Shell History**: Make sure shell history is disabled when running `conceal set` or `conceal update` (see [Add a secret](README.md#add-a-secret))
+5. **Recovery**: Keep an appropriate recovery method for the original credential; Linux keyring values disappear at reboot. Do not restore outstanding action approvals from backups.
+6. **Secret Input**: Use the hidden `set` or `update` prompt, or stdin from a trusted source. See [secret input behavior](docs/reference.md#store-and-manage-secrets).
 
 ### For Developers
 
@@ -119,12 +115,9 @@ We appreciate security researchers who report vulnerabilities responsibly. Pleas
 - Application source code and binaries
 - User systems and credential stores
 
-### Threats
-- **Malicious Code Injection**: Mitigated by code review and static analysis
-- **Dependency Vulnerabilities**: Mitigated by automated scanning and updates
-- **Memory Extraction**: Mitigated by secure memory practices
-- **Privilege Escalation**: Mitigated by using OS-native security boundaries
-- **Supply Chain Attacks**: Mitigated by reproducible builds and verification
+### Scope
+
+Conceal helps avoid keys in project files, limit which keys a trusted process receives, and authorize specific service requests. It does not protect against a compromised OS, unrestricted same-account code, malicious trusted applications or adapters, or privileged memory inspection. Local receipts are editable by their owner and are not signed audit evidence.
 
 ### Assumptions
 - User's operating system and credential store are secure

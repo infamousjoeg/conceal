@@ -1,43 +1,14 @@
 //go:build !darwin && !windows && !linux
-// +build !darwin,!windows,!linux
 
 package keychain
 
-import (
-	"fmt"
-)
+import "errors"
 
-// QueryResult represents a query result for cross-platform compatibility
-type QueryResult struct {
-	Account string
-}
+var errUnsupported = errors.New("secret management requires macOS, Windows, or Linux")
 
-// SecretExists is not supported on this platform
-func SecretExists(secretID string) bool {
-	return false
-}
-
-// ListSecrets is not supported on this platform
-func ListSecrets() []QueryResult {
-	return []QueryResult{}
-}
-
-// AddSecret is not supported on this platform
-func AddSecret(secretID string, secret []byte) error {
-	return fmt.Errorf("Secret management is not supported on this platform. Only macOS and Windows are currently supported.")
-}
-
-// DeleteSecret is not supported on this platform
-func DeleteSecret(secretID string) error {
-	return fmt.Errorf("Secret management is not supported on this platform. Only macOS and Windows are currently supported.")
-}
-
-// GetSecret is not supported on this platform
-func GetSecret(secretID string, delivery string) error {
-	return fmt.Errorf("Secret management is not supported on this platform. Only macOS and Windows are currently supported.")
-}
-
-// UpdateSecret is not supported on this platform
-func UpdateSecret(secretID string, secret []byte) error {
-	return fmt.Errorf("Secret management is not supported on this platform. Only macOS and Windows are currently supported.")
-}
+func secretExists(string) bool            { return false }
+func listSecrets() ([]QueryResult, error) { return nil, errUnsupported }
+func addSecret(string, []byte) error      { return errUnsupported }
+func deleteSecret(string) error           { return errUnsupported }
+func readSecret(string) ([]byte, error)   { return nil, errUnsupported }
+func updateSecret(string, []byte) error   { return errUnsupported }

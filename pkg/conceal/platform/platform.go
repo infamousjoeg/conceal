@@ -1,37 +1,20 @@
 package platform
 
-import (
-	"runtime"
-)
+import "runtime"
 
-// GetPlatform returns the current operating system platform
-func GetPlatform() string {
-	return runtime.GOOS
-}
-
-// IsMacOS checks if the current platform is macOS
-func IsMacOS() bool {
-	return runtime.GOOS == "darwin"
-}
-
-// IsWindows checks if the current platform is Windows
-func IsWindows() bool {
-	return runtime.GOOS == "windows"
-}
-
-// IsSupported checks if the current platform supports secret management
-func IsSupported() bool {
-	return IsMacOS() || IsWindows()
-}
-
-// GetSecretStoreName returns the name of the secret store for the current platform
+func GetPlatform() string { return runtime.GOOS }
+func IsMacOS() bool       { return runtime.GOOS == "darwin" }
+func IsWindows() bool     { return runtime.GOOS == "windows" }
+func IsSupported() bool   { return IsMacOS() || IsWindows() || runtime.GOOS == "linux" }
 func GetSecretStoreName() string {
 	switch runtime.GOOS {
 	case "darwin":
 		return "macOS Keychain"
 	case "windows":
 		return "Windows Credential Manager"
+	case "linux":
+		return "Linux kernel keyring"
 	default:
-		return "Unsupported Platform"
+		return "Unsupported platform"
 	}
 }

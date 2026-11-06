@@ -30,13 +30,16 @@ func PrintError(format string, args ...interface{}) {
 	log.Fatalf("\033[31m🚨 %s\033[0m\n", message)
 }
 
-// GetSecretName is a function that prompts the user to input a secret name. If the user does not provide a secret name, the function will prompt the user to input a secret name until a valid secret name is provided.
+// GetSecretName prompts for a name and returns an empty string at end of input.
+// Deprecated: CLI callers should validate input and return read errors.
 func GetSecretName(args []string) string {
 	var secretName string
 	if len(args) == 0 {
 		for secretName == "" {
 			fmt.Println("Please enter the secret name: ")
-			fmt.Scanln(&secretName)
+			if _, err := fmt.Scanln(&secretName); err != nil {
+				return ""
+			}
 		}
 	} else {
 		secretName = args[0]

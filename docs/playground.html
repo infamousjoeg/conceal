@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Review, approve, and run a simulated GitHub request. Learn how Conceal keeps approval and credential use under your control.">
+  <title>Review a request · Conceal playground</title>
+  <style>
+    :root {
+      --paper: #f4f7fb; --surface: #fff; --ink: #172a3a; --muted: #566779;
+      --blue: #174ea6; --green: #176545; --amber: #86550b; --line: #b7c7d7;
+      --tint: #e8f0fc; --success: #e7f4ed; --warning: #fff2d9;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px; color: var(--ink); background: var(--paper);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; line-height: 1.55; }
+    main, header, footer { width: min(1120px, calc(100% - 48px)); margin: auto; }
+    header { padding: 24px 0; display: flex; align-items: center; gap: 20px; justify-content: space-between; }
+    a { color: var(--blue); text-underline-offset: .2em; }
+    a:hover { text-decoration-thickness: 2px; }
+    .brand { font-weight: 750; font-size: 1.3rem; text-decoration: none; color: var(--ink); }
+    nav { display: flex; gap: 20px; flex-wrap: wrap; font-size: .9rem; }
+    h1 { font-size: clamp(2rem, 4vw, 3.3rem); line-height: 1.12; letter-spacing: -.025em; margin: 12px 0 20px; max-width: 24ch; }
+    h2 { font-size: 1.3rem; line-height: 1.25; margin: 0 0 16px; }
+    h3 { font-size: 1rem; margin: 0 0 8px; }
+    p { max-width: 72ch; margin: 0 0 16px; }
+    .intro { padding: 24px 0 12px; }
+    .intro > p:first-of-type { font-size: 1.1rem; }
+    .simulation { color: var(--muted); font-size: .9rem; }
+    .journey { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0; list-style: none; counter-reset: steps; gap: 18px; margin: 24px 0; }
+    .journey li { counter-increment: steps; padding: 14px 0; border-top: 3px solid var(--line); }
+    .journey li::before { content: counter(steps) ". "; font-weight: 700; }
+    .journey span { display: block; color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .journey [aria-current="step"] { border-color: var(--blue); }
+    .workspace { display: grid; grid-template-columns: 1.2fr 1fr; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; overflow: hidden; }
+    .request, .decision { min-width: 0; padding: 28px; }
+    .decision { border-left: 1px solid var(--line); }
+    .label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .label-row small { color: var(--muted); }
+    label { display: block; font-size: .9rem; font-weight: 650; margin: 14px 0 6px; }
+    input, select, textarea, button { font: inherit; }
+    input, select, textarea { width: 100%; min-width: 0; padding: 10px 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; }
+    textarea { resize: vertical; min-height: 84px; }
+    .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .hint { color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
+    .policy { margin: 20px 0 0; padding: 12px 14px; background: var(--paper); border-left: 3px solid var(--line); font-size: .9rem; }
+    code, pre { font-family: Consolas, "SFMono-Regular", monospace; font-size: .85rem; }
+    code { overflow-wrap: anywhere; }
+    button { padding: 11px 16px; border: 1px solid var(--blue); border-radius: 6px; background: var(--blue); color: #fff; font-weight: 650; cursor: pointer; }
+    button:hover:not(:disabled) { filter: brightness(.93); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .secondary { background: var(--surface); color: var(--blue); }
+    :focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+    .approval { background: var(--tint); padding: 18px; border-radius: 6px; margin: 18px 0; }
+    .approval p { font-size: .95rem; margin-bottom: 12px; }
+    .approval strong { display: block; margin-bottom: 6px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
+    .result { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 24px; }
+    .result strong { display: block; font-size: 1.15rem; margin-bottom: 8px; }
+    #status { padding: 14px; border-radius: 6px; background: var(--paper); margin: 10px 0; }
+    #status p { margin: 0; font-size: .95rem; }
+    #status[data-tone="success"] { background: var(--success); color: var(--green); }
+    #status[data-tone="blocked"] { background: var(--warning); color: var(--amber); }
+    .count { color: var(--muted); font-size: .9rem; }
+    #changes { margin: 12px 0; border-left: 3px solid var(--amber); padding-left: 12px; font-size: .9rem; overflow-wrap: anywhere; }
+    #changes ul { padding-left: 20px; margin: 8px 0; }
+    .token { display: flex; gap: 12px; align-items: center; font-size: .9rem; color: var(--muted); padding-top: 16px; }
+    .key { font-size: 1.3rem; color: var(--green); }
+    .extras { margin: 24px 0; }
+    details { border-bottom: 1px solid var(--line); padding: 16px 0; }
+    summary { cursor: pointer; font-weight: 650; width: fit-content; }
+    details > p { margin-top: 14px; }
+    .experiments { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 8px; }
+    .experiments button { font-weight: 500; font-size: .9rem; }
+    pre { background: var(--surface); padding: 18px; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 6px; }
+    .next { border-left: 4px solid var(--blue); padding: 4px 0 4px 20px; margin: 36px 0; }
+    .next h2 { margin-bottom: 10px; }
+    .next p:last-child { margin-bottom: 0; }
+    footer { color: var(--muted); font-size: .85rem; padding: 0 0 32px; }
+    [hidden] { display: none !important; }
+    @media (prefers-color-scheme: dark) {
+      :root { --paper: #17232e; --surface: #20313f; --ink: #edf3f9; --muted: #b3c5d5; --blue: #9fc5ff; --green: #a5e0bc; --amber: #ffcf83; --line: #526a7f; --tint: #293f5b; --success: #213f33; --warning: #463923; }
+      button { color: #172a3a; }
+      .secondary { color: var(--blue); }
+    }
+    @media (max-width: 740px) {
+      main, header, footer { width: calc(100% - 32px); }
+      header { align-items: flex-start; padding-bottom: 12px; }
+      nav { gap: 8px 16px; justify-content: flex-end; }
+      .intro { padding-top: 20px; }
+      .journey { gap: 12px; font-size: .95rem; }
+      .journey span { font-size: .8rem; }
+      .workspace { grid-template-columns: 1fr; }
+      .request, .decision { padding: 20px; }
+      .decision { border-left: 0; border-top: 1px solid var(--line); }
+      .branches { grid-template-columns: 1fr; gap: 0; }
+      .actions button { flex-grow: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="../README.md">Conceal</a>
+    <nav aria-label="Documentation">
+      <a href="getting-started.md">Get started</a>
+      <a href="actions.md">Action guide</a>
+      <a href="desktop.md">Desktop inbox</a>
+      <a href="https://github.com/infamousjoeg/conceal">Repository</a>
+    </nav>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="title">
+      <h1 id="title">Give the action your approval. Keep the key.</h1>
+      <p>Your coding agent wants to open a draft pull request. You decide exactly what it may send. Conceal uses the stored GitHub token; the agent receives the result.</p>
+      <p class="simulation"><strong>Interactive simulation.</strong> No keys, installation, or GitHub account needed. This page makes no API calls. You play both the agent and the approving operator.</p>
+    </section>
+    <ol class="journey" aria-label="Approval workflow">
+      <li id="step-review" aria-current="step"><b>Review the request</b><span>What does the agent want to do?</span></li>
+      <li id="step-approve"><b>Approve it</b><span>You authorize these exact details.</span></li>
+      <li id="step-run"><b>Run it once</b><span>Conceal checks, then uses the key.</span></li>
+    </ol>
+    <div class="workspace">
+      <section class="request" aria-labelledby="request-heading">
+        <div class="label-row"><h2 id="request-heading">The agent's request</h2><small id="request-id">Demo 1</small></div>
+        <p class="hint">Review every field. You can edit this sample to see what changes.</p>
+        <label for="operation">Action</label>
+        <select id="operation">
+          <option value="draft">Open a draft pull request</option>
+          <option value="issues">List repository issues</option>
+          <option value="merge" hidden>Merge a pull request (not supported)</option>
+        </select>
+        <label for="repository">Repository</label>
+        <input id="repository" value="acme/payments" spellcheck="false" autocomplete="off">
+        <div id="draft-fields">
+          <label for="pr-title">Pull request title</label>
+          <input id="pr-title" value="Fix checkout timeout" maxlength="256" autocomplete="off">
+          <div class="branches">
+            <div><label for="head">From branch (already pushed)</label><input id="head" value="fix-checkout-timeout" spellcheck="false" autocomplete="off"></div>
+            <div><label for="base">Into branch</label><input id="base" value="main" spellcheck="false" autocomplete="off"></div>
+          </div>
+          <label for="body">Description</label>
+          <textarea id="body">Handle slow checkout responses. Tests cover the timeout path.</textarea>
+          <p class="hint">Conceal opens the draft. It does not write code, push a branch, or merge.</p>
+        </div>
+        <div id="issue-fields" hidden>
+          <label for="issue-state">Issue state</label>
+          <select id="issue-state"><option value="open">Open</option><option value="closed">Closed</option><option value="all">All</option></select>
+          <label for="limit">Maximum results (one page)</label>
+          <input id="limit" type="number" value="30" min="1" max="100">
+          <p class="hint">GitHub's issues endpoint also includes pull requests.</p>
+        </div>
+        <p class="policy"><strong>Allowed by this demo's contract:</strong> list issues or open a draft PR in <code>acme/payments</code>. A contract is the operator's list of allowed repositories and actions.</p>
+      </section>
+      <section class="decision" aria-labelledby="decision-heading">
+        <h2 id="decision-heading">Your decision</h2>
+        <p>Would you allow this exact request? Check the repository and every field before approving.</p>
+        <div class="approval">
+          <strong id="approval-label">Not approved</strong>
+          <p id="approval-detail">Permission starts with your decision. Selecting an action does not approve it.</p>
+          <button id="approve" type="button">Approve this request</button>
+        </div>
+        <div id="changes" hidden></div>
+        <div class="actions">
+          <button id="execute" type="button">Run action</button>
+          <button id="prepare" class="secondary" type="button" hidden>Prepare new request</button>
+          <button id="reset" class="secondary" type="button">Reset demo</button>
+        </div>
+        <p id="next-step" class="hint">Try running before approval to see the check.</p>
+        <div class="token"><span class="key" aria-hidden="true">&#9919;</span><span>The stored token stays inside Conceal's trusted execution context.</span></div>
+        <div class="result">
+          <h3>What the agent gets back</h3>
+          <div id="status" role="status" aria-live="polite" aria-atomic="true">
+            <strong id="result-title">No request sent</strong>
+            <p id="result-detail">Review the sample, approve it, then run the action.</p>
+          </div>
+          <span class="count">Simulated API calls: <b id="calls">0</b></span>
+        </div>
+      </section>
+    </div>
+    <section class="extras" aria-label="Explore further">
+      <details id="what-if">
+        <summary>What if something changes?</summary>
+        <p>Approve a request first, then try an experiment and run it. A denied attempt sends nothing. Use “Prepare new request” to start another review, or “Reset demo” to restore the sample.</p>
+        <div class="experiments">
+          <button id="change" class="secondary" type="button">Change a field</button>
+          <button id="expire" class="secondary" type="button" disabled>Let approval expire</button>
+          <button id="wrong-repo" class="secondary" type="button">Try another repository</button>
+          <button id="forbidden" class="secondary" type="button">Try a merge</button>
+        </div>
+        <p class="hint">After a successful run, click “Run action” again to test reuse. The approval deadline here advances only when you choose “Let approval expire”; the real CLI uses a clock.</p>
+      </details>
+      <details id="technical">
+        <summary>See the request Conceal would send</summary>
+        <p>This preview has the HTTP method, destination, and body. Authorization uses the stored token, which is not shown. The real CLI's <code>action inspect</code> also includes the proposal ID, contract, timestamp, and a digest that you supply when approving.</p>
+        <pre id="request-json"></pre>
+        <p class="hint">The demo compares request snapshots in this page. It does not create a real contract, cryptographic approval, or receipt.</p>
+      </details>
+      <details>
+        <summary>Who keeps the agent from approving itself?</summary>
+        <p>The operator must run Conceal in a trusted environment that the untrusted agent cannot control. The real candidate does not include an agent connector or sandbox. An agent with unrestricted access to your account could run <code>approve</code> or read your keys itself.</p>
+        <p>Use the <a href="actions.md#the-trust-boundary">deployment guide</a> before connecting an agent. This page teaches the decision flow; its buttons do not establish that security boundary.</p>
+      </details>
+    </section>
+    <section class="next" aria-labelledby="next-heading">
+      <h2 id="next-heading">Try the same review in your terminal</h2>
+      <p>Try the <a href="desktop.md">desktop approval inbox</a> for a full review screen with GitHub and S3 practice requests. The <a href="actions.md#try-it-without-a-token">no-token CLI exercise</a> lets you prepare, inspect, approve, and revoke a request without contacting GitHub.</p>
+      <p>Just need a key for your own app? Start with the <a href="getting-started.md#run-your-first-app">Python example</a>. Already use Summon? <a href="getting-started.md#use-your-existing-summon-workflow">Keep your existing workflow</a>.</p>
+    </section>
+  </main>
+  <footer>Conceal 4.3 release candidate. Demo data stays in this page and resets when you reload. Documentation links open Markdown files; on GitHub they render as guides.</footer>
+  <script>
+    (() => {
+      "use strict";
+      const $ = id => document.getElementById(id);
+      const fields = ["operation", "repository", "pr-title", "head", "base", "body", "issue-state", "limit"];
+      const defaults = Object.fromEntries(fields.map(id => [id, $(id).value]));
+      let approval = null, consumed = false, expired = false, calls = 0, sequence = 1;
+      const operationNames = { draft: "github.pulls.create-draft", issues: "github.issues.list", merge: "github.pulls.merge" };
+      function request() {
+        const operation = $("operation").value;
+        const input = operation === "draft"
+          ? { title: $("pr-title").value, head: $("head").value, base: $("base").value, body: $("body").value }
+          : operation === "issues" ? { state: $("issue-state").value, limit: Number($("limit").value) } : {};
+        return { operation: operationNames[operation], repository: $("repository").value, input };
+      }
+      function invalid() {
+        const value = request();
+        if (value.repository !== "acme/payments") return "This repository is outside the contract. Restore acme/payments or ask the operator to review a new contract.";
+        if ($("operation").value === "merge") return "Merging is not supported. Choose an issue read or a draft pull request.";
+        if ($("operation").value === "draft" && ["title", "head", "base"].some(key => !value.input[key].trim())) return "Title and both branch names are required. Fill them in before review.";
+        if ($("operation").value === "issues" && (!Number.isInteger(value.input.limit) || value.input.limit < 1 || value.input.limit > 100)) return "Choose a whole-number result limit from 1 to 100.";
+        return "";
+      }
+      function preview(value) {
+        const root = "https://api.github.com/repos/" + value.repository;
+        if (value.operation === operationNames.draft) return { method: "POST", url: root + "/pulls", body: { ...value.input, draft: true, maintainer_can_modify: false } };
+        if (value.operation === operationNames.issues) return { method: "GET", url: root + "/issues?per_page=" + value.input.limit + "&state=" + value.input.state };
+        return { blocked: "This operation is not supported. No HTTP request can be prepared." };
+      }
+      function status(title, detail, tone = "") {
+        $("result-title").textContent = title;
+        $("result-detail").textContent = detail;
+        $("status").dataset.tone = tone;
+      }
+      function update() {
+        const value = request();
+        const changed = approval !== null && JSON.stringify(value) !== JSON.stringify(approval);
+        const problem = invalid();
+        $("draft-fields").hidden = $("operation").value !== "draft";
+        $("issue-fields").hidden = $("operation").value !== "issues";
+        $("request-id").textContent = "Demo " + sequence;
+        $("calls").textContent = calls;
+        $("request-json").textContent = JSON.stringify(preview(value), null, 2);
+        $("approve").disabled = !!approval || !!problem;
+        $("expire").disabled = !approval || consumed || expired;
+        $("prepare").hidden = !approval;
+        $("approval-label").textContent = consumed ? "Approval used" : expired ? "Approval expired" : changed ? "Request changed" : approval ? "Approved for one use" : "Not approved";
+        $("approval-detail").textContent = consumed ? "This approval cannot be reused. A new request needs a new review."
+          : expired ? "Its deadline has passed. Prepare a new request before approving again."
+          : changed ? "Your approval covers the earlier details. This edited request cannot use it."
+          : approval ? "Only these exact details may run. In the CLI, this approval also has a deadline."
+          : problem || "Permission starts with your decision. Selecting an action does not approve it.";
+        $("next-step").textContent = problem ? "Correct the request fields, or reset the demo."
+          : consumed ? "Run again to see reuse refused, or prepare a new request."
+          : expired ? "Run to test expiry, or prepare a new request for review."
+          : changed ? "Run to test the old approval, or prepare a new request for review."
+          : approval ? "Run the approved request, or change a field to test its approval."
+          : "Try running before approval to see the check.";
+        $("changes").hidden = !changed;
+        $("changes").replaceChildren();
+        if (changed) {
+          const title = document.createElement("strong"); title.textContent = "Changed since you approved";
+          const list = document.createElement("ul");
+          const before = { operation: approval.operation, repository: approval.repository, ...approval.input };
+          const after = { operation: value.operation, repository: value.repository, ...value.input };
+          for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+            if (before[key] === after[key]) continue;
+            const item = document.createElement("li");
+            item.textContent = key + ": " + String(before[key] ?? "(absent)") + " → " + String(after[key] ?? "(absent)");
+            list.append(item);
+          }
+          $("changes").append(title, list);
+        }
+        for (const step of ["step-review", "step-approve", "step-run"]) $(step).removeAttribute("aria-current");
+        $(consumed ? "step-run" : approval && !changed && !expired ? "step-run" : "step-review").setAttribute("aria-current", "step");
+      }
+      function edited() {
+        update();
+        status("Request edited", approval ? "Run it to test the old approval, or prepare a new request for a fresh review." : "Review the updated fields before approving.");
+      }
+      fields.forEach(id => $(id).addEventListener("input", edited));
+      $("approve").addEventListener("click", () => {
+        if (approval || invalid()) return;
+        approval = request();
+        update();
+        $("step-run").removeAttribute("aria-current");
+        $("step-approve").setAttribute("aria-current", "step");
+        status("You approved this request", "Now run it. Conceal will check that it still matches your approval.");
+      });
+      $("execute").addEventListener("click", () => {
+        const problem = invalid();
+        if (problem) status("Blocked by the contract or input checks", problem + " No request sent.", "blocked");
+        else if (!approval) status("Blocked: approval required", "Review the request and select “Approve this request”, then run it again. No request sent.", "blocked");
+        else if (consumed) status("Blocked: approval already used", "Prepare a new request and review it if another action is needed. No additional request sent.", "blocked");
+        else if (expired) status("Blocked: approval expired", "Prepare a new request and review it again. No request sent.", "blocked");
+        else if (JSON.stringify(request()) !== JSON.stringify(approval)) status("Blocked: request changed", "The fields no longer match what you approved. Prepare a new request and review its exact details. No request sent.", "blocked");
+        else {
+          consumed = true; calls++;
+          status($("operation").value === "draft" ? "Draft PR created (simulation)" : "Issues returned (simulation)",
+            $("operation").value === "draft"
+              ? "The agent receives draft PR #42 and a result receipt. Your token is not included. The approval is now used."
+              : "The agent receives issue records and a result receipt. Your token is not included. The approval is now used.", "success");
+        }
+        update();
+      });
+      $("prepare").addEventListener("click", () => {
+        approval = null; consumed = false; expired = false; sequence++;
+        update();
+        status("New request prepared", "The current fields are a new proposal. Review them, then approve this request.");
+      });
+      $("reset").addEventListener("click", () => {
+        fields.forEach(id => { $(id).value = defaults[id]; });
+        approval = null; consumed = false; expired = false; calls = 0; sequence = 1;
+        update();
+        status("No request sent", "Review the sample, approve it, then run the action.");
+      });
+      $("change").addEventListener("click", () => {
+        if ($("operation").value === "issues") $("issue-state").value = $("issue-state").value === "open" ? "closed" : "open";
+        else if ($("operation").value === "draft") $("pr-title").value += " — revised";
+        else { status("Choose a supported action first", "Reset the demo to explore changes to an allowed request."); return; }
+        edited();
+      });
+      $("expire").addEventListener("click", () => {
+        if (!approval || consumed) return;
+        expired = true; update();
+        status("The approval deadline passed", "Run it to see the expiry check, or prepare a new request for review.");
+      });
+      $("wrong-repo").addEventListener("click", () => { $("repository").value = "acme/production"; edited(); });
+      $("forbidden").addEventListener("click", () => { $("operation").value = "merge"; edited(); });
+      update();
+    })();
+  </script>
+</body>
+</html>

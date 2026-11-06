@@ -1,127 +1,89 @@
 //go:build windows
-// +build windows
 
 package wincred
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/danieljoos/wincred"
 )
 
-// SecretExists checks if a secret is present in Windows Credential Manager
-func SecretExists(secretID string) bool {
-	cred, err := wincred.GetGenericCredential(getTargetName(secretID))
-	if err != nil {
-		return false
+func SecretExists(id string) bool {
+	credential, err := wincred.GetGenericCredential(getTargetName(id))
+	if credential != nil {
+		clear(credential.CredentialBlob)
 	}
-	return cred != nil
+	return err == nil && credential != nil
 }
 
-// ListSecrets returns all secrets in Windows Credential Manager with the summon prefix
+// ListSecrets enumerates only Conceal's namespace. Windows returns complete
+// records; discard their blobs immediately and return names only.
 func ListSecrets() ([]SecretInfo, error) {
-	creds, err := wincred.List()
+	credentials, err := wincred.FilteredList("summon/*")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list credentials: %w", err)
+		return nil, fmt.Errorf("list credentials: %w", err)
 	}
-
-	var secrets []SecretInfo
-	prefix := "summon/"
-
-	for _, cred := range creds {
-		if len(cred.TargetName) > len(prefix) && cred.TargetName[:len(prefix)] == prefix {
-			secretID := cred.TargetName[len(prefix):]
-			secrets = append(secrets, SecretInfo{
-				Account: secretID,
-			})
+	result := make([]SecretInfo, 0, len(credentials))
+	for _, credential := range credentials {
+		clear(credential.CredentialBlob)
+		if id, ok := strings.CutPrefix(credential.TargetName, "summon/"); ok && id != "" {
+			result = append(result, SecretInfo{Account: id})
 		}
 	}
-
-	return secrets, nil
+	return result, nil
 }
 
-// AddSecret adds a secret to Windows Credential Manager
-func AddSecret(secretID string, secret []byte) error {
-	targetName := getTargetName(secretID)
-
-	// Check if credential already exists
-	if SecretExists(secretID) {
-		return fmt.Errorf("Secret %s already exists in credential manager. Please use `conceal update` instead.", secretID)
+func AddSecret(id string, value []byte) error {
+	existing, err := wincred.GetGenericCredential(getTargetName(id))
+	if existing != nil {
+		clear(existing.CredentialBlob)
 	}
-
-	cred := wincred.NewGenericCredential(targetName)
-	cred.CredentialBlob = secret
-	cred.Comment = "Summon secret managed by Conceal"
-
-	err := cred.Write()
-	if err != nil {
-		return fmt.Errorf("An unexpected error occurred trying to add secret %s to the credential manager: %w", secretID, err)
+	if err == nil {
+		return fmt.Errorf("secret %q already exists; use conceal update", id)
 	}
-
-	// Verify the secret was set successfully
-	if !SecretExists(secretID) {
-		return fmt.Errorf("Secret %s was set but is not found in credential manager.", secretID)
+	if !errors.Is(err, wincred.ErrElementNotFound) {
+		return fmt.Errorf("check secret %q: %w", id, err)
 	}
-
+	credential := wincred.NewGenericCredential(getTargetName(id))
+	credential.CredentialBlob = value
+	credential.Comment = "Summon secret managed by Conceal"
+	if err := credential.Write(); err != nil {
+		return fmt.Errorf("add secret %q: %w", id, err)
+	}
 	return nil
 }
 
-// DeleteSecret removes a secret from Windows Credential Manager
-func DeleteSecret(secretID string) error {
-	targetName := getTargetName(secretID)
-
-	cred, err := wincred.GetGenericCredential(targetName)
-	if err != nil {
-		return fmt.Errorf("An error occurred trying to remove secret from credential manager. Secret '%s' not found in credential manager.", secretID)
+func DeleteSecret(id string) error {
+	credential := wincred.NewGenericCredential(getTargetName(id))
+	if err := credential.Delete(); err != nil {
+		return fmt.Errorf("delete secret %q: %w", id, err)
 	}
-
-	err = cred.Delete()
-	if err != nil {
-		return fmt.Errorf("An error occurred trying to remove secret from credential manager: %w", err)
-	}
-
 	return nil
 }
 
-// GetSecret retrieves a secret from Windows Credential Manager
-func GetSecret(secretID string, delivery string) ([]byte, error) {
-	targetName := getTargetName(secretID)
-
-	cred, err := wincred.GetGenericCredential(targetName)
+func GetSecret(id string, _ string) ([]byte, error) {
+	credential, err := wincred.GetGenericCredential(getTargetName(id))
 	if err != nil {
-		return nil, fmt.Errorf("An error occurred trying to get secret from credential manager. Secret '%s' not found in credential manager.", secretID)
+		return nil, fmt.Errorf("read secret %q: %w", id, err)
 	}
-
-	return cred.CredentialBlob, nil
+	return credential.CredentialBlob, nil
 }
 
-// UpdateSecret updates a secret in Windows Credential Manager
-func UpdateSecret(secretID string, secret []byte) error {
-	targetName := getTargetName(secretID)
-
-	// Check if credential exists
-	if !SecretExists(secretID) {
-		return fmt.Errorf("The secret %s does not exist in the credential manager. Please use `conceal set` instead.", secretID)
-	}
-
-	cred := wincred.NewGenericCredential(targetName)
-	cred.CredentialBlob = secret
-	cred.Comment = "Summon secret managed by Conceal"
-
-	err := cred.Write()
+func UpdateSecret(id string, value []byte) error {
+	credential, err := wincred.GetGenericCredential(getTargetName(id))
 	if err != nil {
-		return fmt.Errorf("An unexpected error occurred trying to update secret %s in the credential manager: %w", secretID, err)
+		return fmt.Errorf("find secret %q: %w", id, err)
 	}
-
+	clear(credential.CredentialBlob)
+	credential.CredentialBlob = value
+	if err := credential.Write(); err != nil {
+		return fmt.Errorf("update secret %q: %w", id, err)
+	}
 	return nil
 }
 
-// SecretInfo represents basic information about a stored secret
-type SecretInfo struct {
-	Account string
-}
+type SecretInfo struct{ Account string }
 
-// getTargetName creates a target name with summon prefix for Windows Credential Manager
-func getTargetName(secretID string) string {
-	return "summon/" + secretID
-}
+func getTargetName(id string) string { return "summon/" + id }

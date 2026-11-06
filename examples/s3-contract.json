@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "name": "backup-inventory",
+  "actions": ["aws.s3.objects.list"],
+  "approval_ttl_seconds": 300,
+  "adapter": "aws",
+  "credentials": {
+    "access_key_id": "aws/access-key-id",
+    "secret_access_key": "aws/secret-access-key",
+    "session_token": "aws/session-token"
+  },
+  "scope": {
+    "region": "us-east-1",
+    "buckets": [
+      { "name": "example-backups", "prefix": "reports/" }
+    ]
+  }
+}

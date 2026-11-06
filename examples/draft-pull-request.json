@@ -1,0 +1,6 @@
+{
+  "title": "Fix checkout timeout",
+  "head": "fix-checkout-timeout",
+  "base": "main",
+  "body": "Describe the change and its validation here."
+}
