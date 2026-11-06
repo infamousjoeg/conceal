@@ -13,6 +13,22 @@ permissions:
   contents: read
 
 jobs:
+  desktop-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.92.0'
+      - run: npm ci
+        working-directory: desktop
+      - run: npm audit --audit-level=moderate
+        working-directory: desktop
+      - run: cargo install cargo-audit --version 0.22.2 --locked
+      - run: cargo audit --file desktop/src-tauri/Cargo.lock
   dependency-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'

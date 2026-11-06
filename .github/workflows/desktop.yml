@@ -1,0 +1,121 @@
+name: Desktop Candidate
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis
+          - os: macos-latest
+            bundles: dmg
+          - os: ubuntu-22.04
+            bundles: deb,appimage
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.92.0'
+          components: rustfmt, clippy
+      - name: Install Linux desktop libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev librsvg2-dev patchelf
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm run sidecar
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
+      - name: Build native installer without publishing
+        run: npm run desktop:build -- --bundles ${{ matrix.bundles }}
+      - name: Exercise Windows native webview and bundled engine
+        if: runner.os == 'Windows'
+        run: npm run test:native
+      - name: Verify sidecar and collect installers
+        shell: python
+        run: |
+          import hashlib
+          import json
+          import pathlib
+          import platform
+          import shutil
+          import subprocess
+          import tempfile
+
+          root = pathlib.Path.cwd()
+          sidecars = list((root / "src-tauri/binaries").glob("conceal-engine-*"))
+          assert len(sidecars) == 1, sidecars
+          engine = sidecars[0]
+          version = subprocess.check_output([engine, "version"], text=True)
+          assert version.strip() == "conceal v4.3.0-rc.1", version
+          catalog = json.loads(subprocess.check_output([engine, "action", "adapters"], text=True))
+          assert {a["id"] for a in catalog["adapters"]} == {"aws", "github"}
+          bundle = root / "src-tauri/target/release/bundle"
+          if platform.system() in {"Darwin", "Linux"}:
+              packaged_engines = list(bundle.rglob("conceal-engine"))
+              assert packaged_engines, "no engine found in native package staging"
+              for packaged in packaged_engines:
+                  packaged_version = subprocess.check_output([packaged, "version"], text=True)
+                  assert packaged_version.strip() == "conceal v4.3.0-rc.1", packaged
+          with tempfile.TemporaryDirectory() as directory:
+              state = pathlib.Path(directory) / "state"
+              args = [str(engine), "action", "--state-dir", str(state)]
+              proposal = json.loads(subprocess.check_output(args + [
+                  "prepare", "--contract", str(root.parent / "examples/s3-contract.json"),
+                  "--operation", "aws.s3.objects.list", "--resource", "example-backups"], text=True))
+              identifier = proposal["request"]["id"]
+              review = json.loads(subprocess.check_output(args + ["review", identifier], text=True))
+              assert review["can_approve"] and not review["can_execute"]
+              subprocess.run(args + ["approve", identifier, "--digest", proposal["digest"]], check=True)
+              subprocess.run(args + ["revoke", identifier], check=True)
+              denied = subprocess.run(args + ["execute", identifier], capture_output=True, text=True)
+              assert denied.returncode != 0 and "consumed or revoked" in denied.stderr
+          destination = root / "dist/packages"
+          destination.mkdir(parents=True, exist_ok=True)
+          installers = [p for p in bundle.rglob("*")
+                        if p.is_file() and p.suffix in {".exe", ".dmg", ".deb", ".AppImage"}]
+          assert installers, "no native installer was produced"
+          for path in installers:
+              shutil.copy2(path, destination / path.name)
+          for name in ("README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"):
+              shutil.copy2(root.parent / name, destination / name)
+          shutil.copytree(root.parent / "docs", destination / "docs")
+          shutil.copytree(root.parent / "examples", destination / "examples")
+          entries = []
+          for path in sorted(destination.rglob("*")):
+              if path.is_file():
+                  entries.append(hashlib.sha256(path.read_bytes()).hexdigest() + "  " + path.relative_to(destination).as_posix())
+          (destination / "checksums.txt").write_text("\n".join(entries) + "\n")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ runner.os }}-${{ runner.arch }}
+          path: desktop/dist/packages/
+          if-no-files-found: error
